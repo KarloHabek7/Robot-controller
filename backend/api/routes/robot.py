@@ -1,0 +1,203 @@
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+
+from backend.robot_client import robot_client
+from backend.deps import get_current_user
+from backend.models import User, ActivityLog
+from backend.database import get_session
+from sqlmodel import Session
+
+router = APIRouter(prefix="/api/robot", tags=["Robot Control"])
+
+class ConnectRequest(BaseModel):
+    host: str
+    port: int
+
+class ConnectResponse(BaseModel):
+    success: bool
+    message: str
+
+class CommandRequest(BaseModel):
+    axis: str
+    value: float
+    direction: str
+
+class JointMoveRequest(BaseModel):
+    joint: int
+    value: float
+    direction: str
+
+class ProgramRequest(BaseModel):
+    program_name: str
+
+class CommandResponse(BaseModel):
+    success: bool
+    command: str
+    timestamp: str
+
+@router.post("/connect", response_model=ConnectResponse)
+async def connect_robot(
+    request: ConnectRequest,
+    current_user: User = Depends(get_current_user)
+):
+    success = await robot_client.connect(request.host, request.port)
+    if success:
+        return ConnectResponse(success=True, message="Connected to robot")
+    else:
+        raise HTTPException(status_code=500, detail="Failed to connect to robot")
+
+@router.post("/disconnect")
+async def disconnect_robot(current_user: User = Depends(get_current_user)):
+    await robot_client.disconnect()
+    return {"success": True, "message": "Disconnected from robot"}
+
+@router.get("/status")
+async def get_status(current_user: User = Depends(get_current_user)):
+    return {
+        "connected": robot_client.is_connected(),
+        "host": robot_client.host,
+        "port": robot_client.port
+    }
+
+def generate_translation_script(axis: str, value: float, direction: str) -> str:
+    axis_index = {"x": 0, "y": 1, "z": 2}[axis.lower()]
+    sign = "+" if direction == "+" else "-"
+    func_name = f"program_{axis}_{'pos' if direction == '+' else 'neg'}"
+    
+    return f"""
+def {func_name}():
+  poz_tcp=get_actual_tcp_pose()
+  poz_tcp2=poz_tcp
+  poz_tcp2[{axis_index}]=poz_tcp2[{axis_index}]{sign}{value}
+  movel(poz_tcp2,a=1,v=1,t=0,r=0)
+end
+"""
+
+def generate_rotation_script(axis: str, value: float, direction: str) -> str:
+    axis_index = {"rx": 3, "ry": 4, "rz": 5}[axis.lower()]
+    sign = "+" if direction == "+" else "-"
+    func_name = f"program_{axis}_{'pos' if direction == '+' else 'neg'}"
+    
+    return f"""
+def {func_name}():
+  poz_tcp=get_actual_tcp_pose()
+  poz_tcp2=poz_tcp
+  poz_tcp2[{axis_index}]=poz_tcp2[{axis_index}]{sign}{value}
+  movel(poz_tcp2,a=1,v=1,t=0,r=0)
+end
+"""
+
+def generate_joint_move_script(joint: int, value: float, direction: str) -> str:
+    joint_index = joint - 1
+    sign = "+" if direction == "+" else "-"
+    func_name = f"program_z{joint}_{'pos' if direction == '+' else 'neg'}"
+    
+    return f"""
+def {func_name}():
+  poz_zgl=get_actual_joint_positions()
+  poz_zgl2=poz_zgl
+  poz_zgl2[{joint_index}]=poz_zgl2[{joint_index}]{sign}{value}
+  movej(poz_zgl2,a=1,v=1,t=0,r=0)
+end
+"""
+
+async def log_command(user_id: int, command: str, success: bool, session: Session):
+    log = ActivityLog(user_id=user_id, command=command, success=success)
+    session.add(log)
+    session.commit()
+
+@router.post("/tcp/translate", response_model=CommandResponse)
+async def tcp_translate(
+    request: CommandRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    script = generate_translation_script(request.axis, request.value, request.direction)
+    success = await robot_client.send_command(script)
+    
+    await log_command(current_user.id, f"TCP Translate {request.axis} {request.direction}{request.value}", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")
+
+@router.post("/tcp/rotate", response_model=CommandResponse)
+async def tcp_rotate(
+    request: CommandRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    script = generate_rotation_script(request.axis, request.value, request.direction)
+    success = await robot_client.send_command(script)
+    
+    await log_command(current_user.id, f"TCP Rotate {request.axis} {request.direction}{request.value}", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")
+
+@router.post("/joint/move", response_model=CommandResponse)
+async def joint_move(
+    request: JointMoveRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    script = generate_joint_move_script(request.joint, request.value, request.direction)
+    success = await robot_client.send_command(script)
+    
+    await log_command(current_user.id, f"Joint {request.joint} Move {request.direction}{request.value}", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")
+
+@router.post("/program/start", response_model=CommandResponse)
+async def start_program(
+    request: ProgramRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    script = f"def {request.program_name}():\n  # Program code goes here\nend"
+    success = await robot_client.send_command(script)
+    
+    await log_command(current_user.id, f"Start Program {request.program_name}", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")
+
+@router.post("/program/stop", response_model=CommandResponse)
+async def stop_program(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    script = "stop"
+    success = await robot_client.send_command(script)
+    
+    await log_command(current_user.id, "Stop Program", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")
+
+@router.post("/emergency-stop", response_model=CommandResponse)
+async def emergency_stop(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    script = "stopj(10)"
+    success = await robot_client.send_command(script)
+    
+    await log_command(current_user.id, "Emergency Stop", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")

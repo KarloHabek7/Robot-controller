@@ -1,0 +1,22 @@
+# Backend
+database.db
+*.pyc
+__pycache__/
+.venv/
+*.egg-info/
+.env
+
+# Frontend
+node_modules/
+dist/
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
