@@ -20,13 +20,26 @@ This will:
 2. Install backend dependencies
 3. Install frontend dependencies
 4. Start the FastAPI backend (port 8000)
-5. Start the Vite dev server (port 5173)
+5. Start the Vite dev server (port 8080)
 
 ## Access
+### Local & Network
+- **Frontend**: `https://localhost:8080` or `https://<YOUR_LOCAL_IP>:8080`
+- **Backend API**: `https://localhost:8000`
+- **API Docs**: `https://localhost:8000/docs`
 
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
+> [!NOTE]
+> When using local IP/localhost, you will see a certificate warning. Click **Advanced** -> **Proceed**. For a secure connection without warnings, use **ngrok**.
+
+### Remote Access (ngrok)
+To enable secure remote access from anywhere:
+1. Create a free account at [ngrok.com](https://ngrok.com/).
+2. Add your authtoken to a `.env` file in the root directory:
+   ```env
+   NGROK_AUTHTOKEN=your_token_here
+   ```
+3. Run `python run.py`. 
+4. Use the custom `https://*.ngrok-free.app` URLs printed in the console.
 
 ## Project Structure
 

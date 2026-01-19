@@ -17,7 +17,7 @@ export default function RobotControl() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [robotConfig, setRobotConfig] = useState({ host: "127.0.0.1", port: 30002 });
+  const [robotConfig, setRobotConfig] = useState({ host: "192.168.15.130", port: 30002 });
   const [position, setPosition] = useState({ x: 0, y: 0, z: 0 });
 
   useEffect(() => {

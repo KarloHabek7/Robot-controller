@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || `${window.location.protocol}//${window.location.hostname}:8000`;
 
 interface LoginCredentials {
     username: string;
@@ -52,6 +52,7 @@ class ApiClient {
     private async request(endpoint: string, options: RequestInit = {}) {
         const headers: HeadersInit = {
             "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "69420",
             ...options.headers,
         };
 
@@ -89,6 +90,7 @@ class ApiClient {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
+                "ngrok-skip-browser-warning": "69420",
             },
             body: formData,
         });
