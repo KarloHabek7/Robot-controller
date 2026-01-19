@@ -11,20 +11,17 @@ const JointControlTable = () => {
   const { t } = useTranslation();
   const { joints, updateJoint, setJoints } = useRobotStore();
 
-  // Step values for each joint (in radians)
+  // Step values for each joint (in degrees)
   const jointStepValues: { [key: number]: number } = {
-    1: 0.1, 2: 0.1, 3: 0.1, 4: 0.1, 5: 0.1, 6: 0.1
+    1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5
   };
 
   const handleJog = async (jointId: number, direction: '+' | '-') => {
-    const stepValue = jointStepValues[jointId] || 0.1;
-
-    // Convert radians to degrees for display (roughly 1 rad = 57.3 deg)
-    const deltaDegrees = (stepValue * 180) / Math.PI;
+    const stepValue = jointStepValues[jointId] || 5;
     const joint = joints.find(j => j.id === jointId);
     if (!joint) return;
 
-    const newAngle = direction === '+' ? joint.angle + deltaDegrees : joint.angle - deltaDegrees;
+    const newAngle = direction === '+' ? joint.angle + stepValue : joint.angle - stepValue;
     updateJoint(jointId, parseFloat(newAngle.toFixed(2)));
 
     try {

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+import asyncio
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -8,8 +9,67 @@ from backend.deps import get_current_user
 from backend.models import User, ActivityLog
 from backend.database import get_session
 from sqlmodel import Session
+import json
+import math
 
 router = APIRouter(prefix="/api/robot", tags=["Robot Control"])
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+        self.broadcast_task: Optional[asyncio.Task] = None
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        if not self.broadcast_task or self.broadcast_task.done():
+            self.broadcast_task = asyncio.create_task(self.broadcast_robot_state())
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except Exception:
+                pass
+
+    async def broadcast_robot_state(self):
+        print("[RobotWS] Starting state broadcast task")
+        while self.active_connections:
+            if robot_client.is_connected():
+                state = await robot_client.read_state()
+                if state:
+                    # Convert joint radians to degrees
+                    state["joints"] = [math.degrees(q) for q in state["joints"]]
+                    
+                    # Convert TCP pose: [x, y, z] from meters to mm, [rx, ry, rz] from rad to deg
+                    tcp = state["tcp_pose"]
+                    state["tcp_pose"] = [
+                        tcp[0] * 1000.0,
+                        tcp[1] * 1000.0,
+                        tcp[2] * 1000.0,
+                        math.degrees(tcp[3]),
+                        math.degrees(tcp[4]),
+                        math.degrees(tcp[5])
+                    ]
+                    
+                    await self.broadcast(json.dumps(state))
+            await asyncio.sleep(0.1) # 10Hz update rate
+        print("[RobotWS] Stopping state broadcast task")
+
+manager = ConnectionManager()
+
+@router.websocket("/ws")
+async def websocket_robot_state(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 class ConnectRequest(BaseModel):
     host: str
@@ -66,11 +126,14 @@ def generate_translation_script(axis: str, value: float, direction: str) -> str:
     sign = "+" if direction == "+" else "-"
     func_name = f"program_{axis}_{'pos' if direction == '+' else 'neg'}"
     
+    # value is in mm from frontend, convert to meters for URScript
+    m_value = value / 1000.0
+    
     return f"""
 def {func_name}():
   poz_tcp=get_actual_tcp_pose()
   poz_tcp2=poz_tcp
-  poz_tcp2[{axis_index}]=poz_tcp2[{axis_index}]{sign}{value}
+  poz_tcp2[{axis_index}]=poz_tcp2[{axis_index}]{sign}{m_value}
   movel(poz_tcp2,a=1,v=1,t=0,r=0)
 end
 """
@@ -80,11 +143,14 @@ def generate_rotation_script(axis: str, value: float, direction: str) -> str:
     sign = "+" if direction == "+" else "-"
     func_name = f"program_{axis}_{'pos' if direction == '+' else 'neg'}"
     
+    # value is in degrees from frontend, convert to radians for URScript
+    rad_value = math.radians(value)
+    
     return f"""
 def {func_name}():
   poz_tcp=get_actual_tcp_pose()
   poz_tcp2=poz_tcp
-  poz_tcp2[{axis_index}]=poz_tcp2[{axis_index}]{sign}{value}
+  poz_tcp2[{axis_index}]=poz_tcp2[{axis_index}]{sign}{rad_value}
   movel(poz_tcp2,a=1,v=1,t=0,r=0)
 end
 """
@@ -94,11 +160,14 @@ def generate_joint_move_script(joint: int, value: float, direction: str) -> str:
     sign = "+" if direction == "+" else "-"
     func_name = f"program_z{joint}_{'pos' if direction == '+' else 'neg'}"
     
+    # value is in degrees from frontend, convert to radians for URScript
+    rad_value = math.radians(value)
+    
     return f"""
 def {func_name}():
   poz_zgl=get_actual_joint_positions()
   poz_zgl2=poz_zgl
-  poz_zgl2[{joint_index}]=poz_zgl2[{joint_index}]{sign}{value}
+  poz_zgl2[{joint_index}]=poz_zgl2[{joint_index}]{sign}{rad_value}
   movej(poz_zgl2,a=1,v=1,t=0,r=0)
 end
 """

@@ -28,6 +28,42 @@ export interface StartProgramRequest {
 }
 
 class URRobotService {
+  private socket: WebSocket | null = null;
+
+  subscribeToRobotState(onStateUpdate: (state: any) => void) {
+    if (this.socket) {
+      this.socket.close();
+    }
+
+    const wsUrl = API_BASE_URL.replace('http', 'ws') + '/robot/ws';
+    this.socket = new WebSocket(wsUrl);
+
+    this.socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        onStateUpdate(data);
+      } catch (error) {
+        console.error('Error parsing robot state:', error);
+      }
+    };
+
+    this.socket.onclose = () => {
+      console.log('Robot state WebSocket closed');
+      this.socket = null;
+    };
+
+    this.socket.onerror = (error) => {
+      console.error('Robot state WebSocket error:', error);
+    };
+  }
+
+  unsubscribeFromRobotState() {
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
+  }
+
   async connect(host: string, port: number = 30002): Promise<boolean> {
     try {
       const response = await fetch(`${API_BASE_URL}/connect`, {
@@ -35,7 +71,7 @@ class URRobotService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ host, port }),
       });
-      
+
       if (!response.ok) throw new Error('Connection failed');
       const data = await response.json();
       return data.success;
@@ -52,7 +88,7 @@ class URRobotService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       });
-      
+
       if (!response.ok) throw new Error('Translation failed');
       const data = await response.json();
       return data.success;
@@ -69,7 +105,7 @@ class URRobotService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       });
-      
+
       if (!response.ok) throw new Error('Rotation failed');
       const data = await response.json();
       return data.success;
@@ -86,7 +122,7 @@ class URRobotService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       });
-      
+
       if (!response.ok) throw new Error('Joint move failed');
       const data = await response.json();
       return data.success;
@@ -103,7 +139,7 @@ class URRobotService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ programName }),
       });
-      
+
       if (!response.ok) throw new Error('Program start failed');
       const data = await response.json();
       return data.success;
@@ -118,7 +154,7 @@ class URRobotService {
       const response = await fetch(`${API_BASE_URL}/program/stop`, {
         method: 'POST',
       });
-      
+
       if (!response.ok) throw new Error('Program stop failed');
       const data = await response.json();
       return data.success;
@@ -133,7 +169,7 @@ class URRobotService {
       const response = await fetch(`${API_BASE_URL}/emergency-stop`, {
         method: 'POST',
       });
-      
+
       if (!response.ok) throw new Error('Emergency stop failed');
       const data = await response.json();
       return data.success;

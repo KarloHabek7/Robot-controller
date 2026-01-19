@@ -17,9 +17,45 @@ export const removeToken = (): void => {
 // API Client with automatic token injection
 class ApiClient {
     private baseURL: string;
+    private socket: WebSocket | null = null;
 
     constructor(baseURL: string) {
         this.baseURL = baseURL;
+    }
+
+    subscribeToRobotState(onStateUpdate: (state: any) => void) {
+        if (this.socket) {
+            this.socket.close();
+        }
+
+        const wsUrl = this.baseURL.replace('http', 'ws') + '/api/robot/ws';
+        console.log('[ApiClient] Connecting to WebSocket:', wsUrl);
+        this.socket = new WebSocket(wsUrl);
+
+        this.socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                onStateUpdate(data);
+            } catch (error) {
+                console.error('Error parsing robot state:', error);
+            }
+        };
+
+        this.socket.onclose = () => {
+            console.log('Robot state WebSocket closed');
+            this.socket = null;
+        };
+
+        this.socket.onerror = (error) => {
+            console.error('Robot state WebSocket error:', error);
+        };
+    }
+
+    unsubscribeFromRobotState() {
+        if (this.socket) {
+            this.socket.close();
+            this.socket = null;
+        }
     }
 
     private async request<T>(

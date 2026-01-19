@@ -8,12 +8,16 @@ import CommandPanel from '@/components/CommandPanel';
 import { useRobotStore } from '@/stores/robotStore';
 
 const Index = () => {
-  const { position, isConnected, setConnectionStatus } = useRobotStore();
+  const { tcpPose, isConnected, setConnectionStatus, host, port } = useRobotStore();
+
+  const handleConfigChange = (newHost: string, newPort: number) => {
+    setConnectionStatus(isConnected, newHost, newPort);
+  };
 
   const handleToggleConnection = () => {
     const newStatus = !isConnected;
     setConnectionStatus(newStatus);
-    
+
     if (newStatus) {
       toast.success("Connected to robot (demo mode)!");
     } else {
@@ -25,7 +29,7 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-background relative overflow-hidden">
       {/* Diagonal gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/5 pointer-events-none" />
-      
+
       <div className="container mx-auto p-6 relative z-10 max-w-[1800px]">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
@@ -37,9 +41,9 @@ const Index = () => {
               Professional robot control and monitoring system
             </p>
           </div>
-          <ConnectionStatus 
-            connected={isConnected} 
-            onToggleConnection={handleToggleConnection} 
+          <ConnectionStatus
+            isConnected={isConnected}
+            onToggleConnection={handleToggleConnection}
           />
         </div>
 
@@ -60,12 +64,16 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Position Display */}
           <div>
-            <PositionDisplay position={position} />
+            <PositionDisplay pose={tcpPose} />
           </div>
 
           {/* Robot Configuration */}
           <div>
-            <RobotConfiguration />
+            <RobotConfiguration
+              host={host || "192.168.15.130"}
+              port={port || 30002}
+              onChange={handleConfigChange}
+            />
           </div>
 
           {/* Command Panel */}

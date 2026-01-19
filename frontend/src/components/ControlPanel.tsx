@@ -13,8 +13,8 @@ interface ControlPanelProps {
 
 const ControlPanel = ({ onMove, onGoToPosition }: ControlPanelProps) => {
   const { t } = useTranslation();
-  const [stepSize, setStepSize] = useState('0.01');
-  const [rotationStep, setRotationStep] = useState('0.05');
+  const [stepSize, setStepSize] = useState('10');
+  const [rotationStep, setRotationStep] = useState('5');
 
   const handleRotation = async (axis: 'rx' | 'ry' | 'rz', direction: '+' | '-') => {
     try {
@@ -114,7 +114,7 @@ const ControlPanel = ({ onMove, onGoToPosition }: ControlPanelProps) => {
                 onChange={(e) => setStepSize(e.target.value)}
                 className="w-12 border-0 p-0 h-6 text-xs text-center focus-visible:ring-0 font-mono"
               />
-              <span className="text-[10px] text-muted-foreground mr-1 italic">m</span>
+              <span className="text-[10px] text-muted-foreground mr-1 italic">mm</span>
             </div>
           </div>
         </div>
@@ -169,7 +169,7 @@ const ControlPanel = ({ onMove, onGoToPosition }: ControlPanelProps) => {
                   onChange={(e) => setRotationStep(e.target.value)}
                   className="w-12 border-0 p-0 h-6 text-xs text-center focus-visible:ring-0 font-mono"
                 />
-                <span className="text-[10px] text-muted-foreground mr-1 italic">rad</span>
+                <span className="text-[10px] text-muted-foreground mr-1 italic">°</span>
               </div>
             </div>
           </div>

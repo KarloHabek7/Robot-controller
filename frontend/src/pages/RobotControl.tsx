@@ -12,24 +12,33 @@ import RobotConfiguration from "@/components/RobotConfiguration";
 import ProgramControl from "@/components/ProgramControl";
 import { Header } from "@/components/Header";
 import { api } from "@/services/api";
+import { useRobotStore } from "@/stores/robotStore";
 
 export default function RobotControl() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const { isConnected, tcpPose, targetJoints, targetTcpPose, setConnectionStatus, setRobotState, setTargetState } = useRobotStore();
   const [robotConfig, setRobotConfig] = useState({ host: "192.168.15.130", port: 30002 });
-  const [position, setPosition] = useState({ x: 0, y: 0, z: 0 });
 
   useEffect(() => {
     checkStatus();
     const interval = setInterval(checkStatus, 5000);
-    return () => clearInterval(interval);
+
+    // Subscribe to real-time state
+    api.subscribeToRobotState((state) => {
+      setRobotState(state.joints, state.tcp_pose, state.model);
+    });
+
+    return () => {
+      clearInterval(interval);
+      api.unsubscribeFromRobotState();
+    };
   }, []);
 
   const checkStatus = async () => {
     try {
       const status = await api.getRobotStatus();
-      setIsConnected(status.connected);
+      setConnectionStatus(status.connected, status.host, status.port);
       if (status.host) {
         setRobotConfig({ host: status.host, port: status.port });
       }
@@ -42,7 +51,7 @@ export default function RobotControl() {
     if (isConnected) {
       try {
         await api.disconnectRobot();
-        setIsConnected(false);
+        setConnectionStatus(false);
         toast.success(t('robot.disconnected'));
       } catch (error) {
         toast.error(t('errors.commandFailed'));
@@ -52,7 +61,7 @@ export default function RobotControl() {
         setLoading(true);
         const result = await api.connectRobot(robotConfig.host, robotConfig.port);
         if (result.success) {
-          setIsConnected(true);
+          setConnectionStatus(true, robotConfig.host, robotConfig.port);
           toast.success(t('robot.connected'));
         }
       } catch (error) {
@@ -102,6 +111,14 @@ export default function RobotControl() {
 
     if (axis && dir && value !== undefined) {
       try {
+        // Update target position for visualization (ghost robot)
+        const newTarget = [...targetTcpPose];
+        const axisIndex = { 'x': 0, 'y': 1, 'z': 2 }[axis];
+        if (axisIndex !== undefined) {
+          newTarget[axisIndex] += (dir === '+' ? value : -value);
+          setTargetState(targetJoints, newTarget);
+        }
+
         await api.tcpTranslate(axis, value, dir);
         toast.success(`${t('controls.translate')} ${axis.toUpperCase()} ${dir}${value}`);
       } catch (error) {
@@ -145,7 +162,7 @@ export default function RobotControl() {
             />
             <div className="mt-auto">
               <ConnectionStatus
-                connected={isConnected}
+                isConnected={isConnected}
                 onToggleConnection={handleToggleConnection}
               />
             </div>
@@ -153,7 +170,7 @@ export default function RobotControl() {
 
           {/* Middle Column */}
           <div className="xl:col-span-5 space-y-8">
-            <PositionDisplay position={position} />
+            <PositionDisplay pose={tcpPose} />
             <ControlPanel
               onMove={handleMove}
               onGoToPosition={(x, y, z) => console.log('Go to:', x, y, z)}
