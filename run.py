@@ -30,7 +30,7 @@ def setup_venv():
         subprocess.check_call([sys.executable, "-m", "venv", VENV_DIR])
     
     print("[Setup] Installing/Updating backend dependencies...")
-    subprocess.check_call([get_venv_pip(), "install", "-r", REQUIREMENTS_FILE])
+    subprocess.check_call([get_venv_python(), "-m", "pip", "install", "-r", REQUIREMENTS_FILE])
 
 def setup_frontend():
     print("[Setup] Installing frontend dependencies (npm)...")
@@ -40,7 +40,7 @@ def setup_frontend():
 def run_backend():
     print("[Backend] Starting Uvicorn...")
     python_executable = get_venv_python()
-    subprocess.run([python_executable, "-m", "uvicorn", "backend.main:app", "--reload", "--port", "8000"], check=False)
+    subprocess.run([python_executable, "-m", "uvicorn", "backend.main:app", "--reload", "--host", "127.0.0.1", "--port", "8000", "--log-level", "debug"], check=False)
 
 def run_frontend():
     print("[Frontend] Starting Vite...")

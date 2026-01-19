@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from backend.database import get_session
 from backend.models import User
+from backend.deps import get_current_user
 from backend.auth import (
     verify_password,
     get_password_hash,
@@ -26,7 +27,7 @@ class UserResponse(BaseModel):
     username: str
     email: str
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=Token)
 def register(user_data: UserRegister, session: Session = Depends(get_session)):
     # Check if user exists
     statement = select(User).where(User.username == user_data.username)
@@ -57,7 +58,13 @@ def register(user_data: UserRegister, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(new_user)
     
-    return new_user
+    # Create access token immediately
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": new_user.username}, expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/login", response_model=Token)
 def login(
@@ -84,7 +91,5 @@ def login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/me", response_model=UserResponse)
-def get_me(current_user: User = Depends()):
-    from backend.deps import get_current_user
-    # This is a placeholder - the actual dependency will be injected
+def get_me(current_user: User = Depends(get_current_user)):
     return current_user
