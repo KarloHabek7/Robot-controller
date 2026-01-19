@@ -119,36 +119,40 @@ export default function RobotControl() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background industrial-grid selection:bg-primary/20">
       <Header />
-      <main className="container mx-auto p-4 md:p-6 space-y-6">
+      <main className="container mx-auto p-4 md:p-8 space-y-8">
         {/* Top Section - 3D Viewer and Joint Controls */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="h-[400px] md:h-[600px] rounded-xl overflow-hidden border bg-card shadow-sm">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
+          <div className="xl:col-span-7 h-[500px] md:h-[650px] rounded-[2rem] overflow-hidden border bg-card shadow-2xl relative group">
             <Robot3DViewer />
+            {/* Overlay Gradient for depth */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-background/20 to-transparent" />
           </div>
-          <div className="h-auto xl:h-[600px]">
+          <div className="xl:col-span-5 flex flex-col">
             <JointControlTable />
           </div>
         </div>
 
         {/* Bottom Section - Responsive Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-8">
           {/* Left Column */}
-          <div className="xl:col-span-3 space-y-6">
+          <div className="xl:col-span-3 space-y-8 flex flex-col">
             <RobotConfiguration
               host={robotConfig.host}
               port={robotConfig.port}
               onChange={(host, port) => setRobotConfig({ host, port })}
             />
-            <ConnectionStatus
-              connected={isConnected}
-              onToggleConnection={handleToggleConnection}
-            />
+            <div className="mt-auto">
+              <ConnectionStatus
+                connected={isConnected}
+                onToggleConnection={handleToggleConnection}
+              />
+            </div>
           </div>
 
           {/* Middle Column */}
-          <div className="xl:col-span-5 space-y-6">
+          <div className="xl:col-span-5 space-y-8">
             <PositionDisplay position={position} />
             <ControlPanel
               onMove={handleMove}
@@ -157,12 +161,19 @@ export default function RobotControl() {
           </div>
 
           {/* Right Column */}
-          <div className="xl:col-span-4 space-y-6">
+          <div className="xl:col-span-4 space-y-8">
             <ProgramControl />
             <CommandPanel />
           </div>
         </div>
       </main>
+
+      {/* Footer / Status Bar */}
+      <footer className="border-t bg-card/50 backdrop-blur p-4 text-center mt-12">
+        <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted-foreground/40">
+          UR5 Robot Control System • Advanced Agentic Interface
+        </p>
+      </footer>
     </div>
   );
 }

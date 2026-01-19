@@ -1,87 +1,110 @@
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, PerspectiveCamera, Environment } from '@react-three/drei';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Grid, PerspectiveCamera, Environment, ContactShadows, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { useRobotStore } from '@/stores/robotStore';
+import { useMemo, useRef } from 'react';
 
 // Industrial robot arm visualization with detailed geometry
 const RobotArm = () => {
-  // Default joints for UR5
-  const joints = [
-    { id: 1, angle: 0 },
-    { id: 2, angle: 0 },
-    { id: 3, angle: 0 },
-    { id: 4, angle: 0 },
-    { id: 5, angle: 0 },
-    { id: 6, angle: 0 },
-  ];
+  const { joints } = useRobotStore();
 
   // Convert degrees to radians
   const toRad = (deg: number) => (deg * Math.PI) / 180;
 
-  // Material definitions
-  const baseMaterial = new THREE.MeshStandardMaterial({
-    color: new THREE.Color('#1e293b'),
-    metalness: 0.9,
-    roughness: 0.2,
-  });
-
-  const accentMaterial = new THREE.MeshStandardMaterial({
-    color: new THREE.Color('#3b82f6'),
-    metalness: 0.8,
-    roughness: 0.3,
-  });
-
-  const jointMaterial = new THREE.MeshStandardMaterial({
-    color: new THREE.Color('#334155'),
-    metalness: 0.95,
-    roughness: 0.15,
-  });
+  // Optimized Materials
+  const materials = useMemo(() => ({
+    body: new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#cbd5e1'), // Silver/Grey
+      metalness: 0.8,
+      roughness: 0.2,
+    }),
+    joints: new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#334155'), // Dark Slate
+      metalness: 0.9,
+      roughness: 0.1,
+    }),
+    accent: new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#3b82f6'), // UR Blue
+      emissive: new THREE.Color('#3b82f6'),
+      emissiveIntensity: 0.2,
+      metalness: 0.5,
+      roughness: 0.2,
+    }),
+    base: new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#1e293b'),
+      metalness: 0.7,
+      roughness: 0.3,
+    })
+  }), []);
 
   return (
-    <group>
+    <group position={[0, 0, 0]}>
       {/* Base Platform */}
-      <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.45, 0.5, 0.1, 32]} />
-        <primitive object={baseMaterial} attach="material" />
-      </mesh>
-
-      {/* Base mounting flange */}
-      <mesh position={[0, 0.12, 0]} castShadow>
-        <cylinderGeometry args={[0.35, 0.4, 0.04, 32]} />
-        <primitive object={accentMaterial} attach="material" />
+      <mesh position={[0, 0.05, 0]} castShadow receiveShadow material={materials.base}>
+        <cylinderGeometry args={[0.35, 0.4, 0.1, 40]} />
       </mesh>
 
       {/* Joint 1 - Base rotation */}
-      <group rotation={[0, toRad(joints[0]?.angle || 0), 0]} position={[0, 0.14, 0]}>
-        <mesh position={[0, 0.15, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.25, 0.28, 0.3, 32]} />
-          <primitive object={jointMaterial} attach="material" />
+      <group rotation={[0, toRad(joints[0]?.angle || 0), 0]} position={[0, 0.1, 0]}>
+        {/* Base Cylinder */}
+        <mesh position={[0, 0.1, 0]} castShadow receiveShadow material={materials.joints}>
+          <cylinderGeometry args={[0.2, 0.2, 0.2, 32]} />
         </mesh>
 
         {/* Joint 2 - Shoulder */}
-        <group rotation={[0, 0, toRad(joints[1]?.angle || 0)]} position={[0, 0.35, 0]}>
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <group rotation={[Math.PI / 2, 0, toRad(joints[1]?.angle || 0)]} position={[0, 0.2, 0]}>
+          <mesh castShadow receiveShadow material={materials.accent}>
             <cylinderGeometry args={[0.18, 0.18, 0.25, 32]} />
-            <primitive object={jointMaterial} attach="material" />
           </mesh>
 
           {/* Upper arm link */}
-          <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
-            <boxGeometry args={[0.18, 0.9, 0.18]} />
-            <primitive object={baseMaterial} attach="material" />
-          </mesh>
-
-          {/* Joint 3 - Elbow */}
-          <group rotation={[0, 0, toRad(joints[2]?.angle || 0)]} position={[0, 0.95, 0]}>
-            <mesh rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.15, 0.15, 0.22, 32]} />
-              <primitive object={jointMaterial} attach="material" />
+          <group rotation={[-Math.PI / 2, 0, 0]}>
+            <mesh position={[0, 0.3, 0]} castShadow receiveShadow material={materials.body}>
+              <boxGeometry args={[0.2, 0.6, 0.15]} />
             </mesh>
 
-            {/* Forearm link */}
-            <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
-              <boxGeometry args={[0.14, 0.65, 0.14]} />
-              <primitive object={baseMaterial} attach="material" />
-            </mesh>
+            {/* Joint 3 - Elbow */}
+            <group rotation={[Math.PI / 2, 0, toRad(joints[2]?.angle || 0)]} position={[0, 0.6, 0]}>
+              <mesh castShadow receiveShadow material={materials.accent}>
+                <cylinderGeometry args={[0.15, 0.15, 0.22, 32]} />
+              </mesh>
+
+              {/* Forearm link */}
+              <group rotation={[-Math.PI / 2, 0, 0]}>
+                <mesh position={[0, 0.25, 0]} castShadow receiveShadow material={materials.body}>
+                  <boxGeometry args={[0.14, 0.5, 0.12]} />
+                </mesh>
+
+                {/* Joint 4 - Wrist 1 */}
+                <group rotation={[Math.PI / 2, 0, toRad(joints[3]?.angle || 0)]} position={[0, 0.5, 0]}>
+                  <mesh castShadow receiveShadow material={materials.joints}>
+                    <cylinderGeometry args={[0.1, 0.1, 0.15, 32]} />
+                  </mesh>
+
+                  {/* Wrist 2 link */}
+                  <group rotation={[-Math.PI / 2, 0, 0]}>
+                    {/* Joint 5 - Wrist 2 */}
+                    <group rotation={[0, 0, toRad(joints[4]?.angle || 0)]} position={[0, 0.1, 0]}>
+                      <mesh rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow material={materials.joints}>
+                        <cylinderGeometry args={[0.08, 0.08, 0.15, 32]} />
+                      </mesh>
+
+                      {/* Joint 6 - Wrist 3 */}
+                      <group rotation={[0, toRad(joints[5]?.angle || 0) + Math.PI / 2, 0]} position={[0, 0.1, 0]}>
+                        <mesh castShadow receiveShadow material={materials.accent}>
+                          <cylinderGeometry args={[0.07, 0.07, 0.05, 32]} />
+                        </mesh>
+
+                        {/* Tool flange/tip */}
+                        <mesh position={[0, 0.05, 0]} material={materials.base}>
+                          <cylinderGeometry args={[0.04, 0.05, 0.05, 16]} />
+                        </mesh>
+                      </group>
+                    </group>
+                  </group>
+                </group>
+              </group>
+            </group>
           </group>
         </group>
       </group>
@@ -91,25 +114,20 @@ const RobotArm = () => {
 
 const Robot3DViewer = () => {
   return (
-    <div className="w-full h-full min-h-[400px]">
-      <Canvas shadows>
-        <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
+    <div className="w-full h-full min-h-[400px] relative group bg-gradient-to-b from-background to-secondary/5">
+      <Canvas shadows dpr={[1, 2]}>
+        <PerspectiveCamera makeDefault position={[4, 3, 4]} fov={45} />
         <OrbitControls
           enableDamping
           dampingFactor={0.05}
           minDistance={1}
-          maxDistance={15}
+          maxDistance={12}
+          makeDefault
         />
 
-        <ambientLight intensity={0.5} />
-        <directionalLight
-          position={[5, 10, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-        />
-        <pointLight position={[-5, 5, -5]} intensity={0.5} color="#3b82f6" />
+        <ambientLight intensity={0.4} />
+        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
+        <pointLight position={[-10, -10, -10]} intensity={0.5} color="#3b82f6" />
 
         <Environment preset="city" />
 
@@ -121,17 +139,32 @@ const Robot3DViewer = () => {
           sectionThickness={1}
           fadeDistance={30}
           fadeStrength={1}
-          cellColor="#94a3b8"
+          cellColor="#64748b"
           sectionColor="#3b82f6"
         />
 
-        <RobotArm />
+        <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
+          <RobotArm />
+        </Float>
 
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-          <planeGeometry args={[50, 50]} />
-          <shadowMaterial opacity={0.2} />
-        </mesh>
+        <ContactShadows
+          position={[0, 0, 0]}
+          opacity={0.4}
+          scale={10}
+          blur={2.5}
+          far={4}
+        />
       </Canvas>
+
+      {/* Decorative corners */}
+      <div className="absolute top-4 left-4 border-l-2 border-t-2 border-primary/30 w-8 h-8 pointer-events-none" />
+      <div className="absolute bottom-4 right-4 border-r-2 border-b-2 border-primary/30 w-8 h-8 pointer-events-none" />
+
+      {/* Viewer Label */}
+      <div className="absolute top-4 right-4 bg-background/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-border/50 shadow-xl pointer-events-none flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">Live 3D View</span>
+      </div>
     </div>
   );
 };

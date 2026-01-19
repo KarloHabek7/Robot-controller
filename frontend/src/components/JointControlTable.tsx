@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useTranslation } from "react-i18next";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -6,27 +5,15 @@ import { Slider } from '@/components/ui/slider';
 import { ChevronUp, ChevronDown, RotateCcw } from 'lucide-react';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
+import { useRobotStore } from '@/stores/robotStore';
 
 const JointControlTable = () => {
   const { t } = useTranslation();
-
-  // Local state for joints (simplified)
-  const [joints, setJoints] = useState([
-    { id: 1, name: 'Base', angle: 0, min: -360, max: 360 },
-    { id: 2, name: 'Shoulder', angle: 0, min: -360, max: 360 },
-    { id: 3, name: 'Elbow', angle: 0, min: -360, max: 360 },
-    { id: 4, name: 'Wrist 1', angle: 0, min: -360, max: 360 },
-    { id: 5, name: 'Wrist 2', angle: 0, min: -360, max: 360 },
-    { id: 6, name: 'Wrist 3', angle: 0, min: -360, max: 360 },
-  ]);
+  const { joints, updateJoint, setJoints } = useRobotStore();
 
   // Step values for each joint (in radians)
   const jointStepValues: { [key: number]: number } = {
     1: 0.1, 2: 0.1, 3: 0.1, 4: 0.1, 5: 0.1, 6: 0.1
-  };
-
-  const setJointAngle = (id: number, angle: number) => {
-    setJoints(prev => prev.map(j => j.id === id ? { ...j, angle: parseFloat(angle.toFixed(2)) } : j));
   };
 
   const handleJog = async (jointId: number, direction: '+' | '-') => {
@@ -38,7 +25,7 @@ const JointControlTable = () => {
     if (!joint) return;
 
     const newAngle = direction === '+' ? joint.angle + deltaDegrees : joint.angle - deltaDegrees;
-    setJointAngle(jointId, newAngle);
+    updateJoint(jointId, parseFloat(newAngle.toFixed(2)));
 
     try {
       await api.jointMove(jointId, stepValue, direction);
@@ -48,7 +35,7 @@ const JointControlTable = () => {
   };
 
   const resetJoints = () => {
-    setJoints(prev => prev.map(j => ({ ...j, angle: 0 })));
+    setJoints(joints.map(j => ({ ...j, angle: 0 })));
     toast.success('Joints reset locally');
   };
 
@@ -73,11 +60,11 @@ const JointControlTable = () => {
         {joints.map((joint) => (
           <div
             key={joint.id}
-            className="grid grid-cols-12 gap-3 items-center p-3 rounded-lg bg-secondary/10 border border-border/50"
+            className="grid grid-cols-12 gap-3 items-center p-3 rounded-lg bg-secondary/10 border border-border/50 hover:bg-secondary/20 transition-colors"
           >
             {/* Joint Name & ID */}
             <div className="col-span-3">
-              <div className="text-[10px] text-muted-foreground">Z{joint.id}</div>
+              <div className="text-[10px] text-muted-foreground font-mono">Z{joint.id}</div>
               <div className="text-sm font-bold text-foreground leading-tight">{joint.name}</div>
             </div>
 
@@ -86,7 +73,7 @@ const JointControlTable = () => {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
                 onClick={() => handleJog(joint.id, '-')}
               >
                 <ChevronDown className="w-4 h-4" />
@@ -94,7 +81,7 @@ const JointControlTable = () => {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
                 onClick={() => handleJog(joint.id, '+')}
               >
                 <ChevronUp className="w-4 h-4" />
@@ -105,7 +92,7 @@ const JointControlTable = () => {
             <div className="col-span-4 px-2">
               <Slider
                 value={[joint.angle]}
-                onValueChange={(values) => setJointAngle(joint.id, values[0])}
+                onValueChange={(values) => updateJoint(joint.id, values[0])}
                 min={joint.min}
                 max={joint.max}
                 step={0.1}
@@ -115,12 +102,12 @@ const JointControlTable = () => {
 
             {/* Current Angle */}
             <div className="col-span-3">
-              <div className="flex items-center bg-background border rounded h-8 px-2">
+              <div className="flex items-center bg-background border rounded h-8 px-2 focus-within:ring-1 focus-within:ring-primary/30 transition-shadow">
                 <Input
                   type="number"
                   value={joint.angle}
-                  onChange={(e) => setJointAngle(joint.id, parseFloat(e.target.value) || 0)}
-                  className="border-0 p-0 h-6 text-sm text-center focus-visible:ring-0"
+                  onChange={(e) => updateJoint(joint.id, parseFloat(e.target.value) || 0)}
+                  className="border-0 p-0 h-6 text-sm text-center focus-visible:ring-0 appearance-none font-mono"
                 />
                 <span className="text-[10px] text-muted-foreground ml-1">°</span>
               </div>

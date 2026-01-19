@@ -4,12 +4,12 @@ database.db
 __pycache__/
 .venv/
 *.egg-info/
-.env
+.env*
 
 # Frontend
 node_modules/
 dist/
-.env.local
+
 
 # IDE
 .vscode/
