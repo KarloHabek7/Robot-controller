@@ -1,0 +1,90 @@
+{
+    "auth": {
+        "title": "UR5 Robot Control System",
+        "subtitle": "Sign in to your account or create a new one",
+        "login": "Login",
+        "signup": "Sign Up",
+        "username": "Username",
+        "email": "Email",
+        "password": "Password",
+        "signIn": "Sign In",
+        "createAccount": "Create Account",
+        "signingIn": "Signing in...",
+        "creatingAccount": "Creating account...",
+        "logout": "Logout",
+        "loginSuccess": "Logged in successfully",
+        "registrationSuccess": "Account created successfully!",
+        "invalidCredentials": "Invalid username or password"
+    },
+    "robot": {
+        "control": "Robot Control",
+        "connect": "Connect",
+        "disconnect": "Disconnect",
+        "connected": "Connected",
+        "disconnected": "Disconnected",
+        "connectionStatus": "Connection Status",
+        "host": "Host/IP Address",
+        "port": "Port",
+        "connectToRobot": "Connect to Robot",
+        "emergencyStop": "Emergency Stop",
+        "jointControl": "Joint Control",
+        "tcpControl": "TCP Control",
+        "programControl": "Program Control",
+        "position": "Position",
+        "orientation": "Orientation"
+    },
+    "controls": {
+        "joint": "Joint {{number}}",
+        "translate": "Translate",
+        "rotate": "Rotate",
+        "movePositive": "Move +",
+        "moveNegative": "Move -",
+        "value": "Value",
+        "degrees": "Degrees",
+        "millimeters": "Millimeters",
+        "radians": "Radians"
+    },
+    "programs": {
+        "start": "Start Program",
+        "stop": "Stop Program",
+        "programName": "Program Name",
+        "running": "Running",
+        "stopped": "Stopped"
+    },
+    "logs": {
+        "commandLog": "Command Log",
+        "timestamp": "Timestamp",
+        "command": "Command",
+        "status": "Status",
+        "success": "Success",
+        "failed": "Failed",
+        "clear": "Clear"
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success",
+        "cancel": "Cancel",
+        "save": "Save",
+        "delete": "Delete",
+        "edit": "Edit",
+        "close": "Close"
+    },
+    "errors": {
+        "connectionFailed": "Failed to connect to robot",
+        "commandFailed": "Command execution failed",
+        "notConnected": "Not connected to robot",
+        "invalidInput": "Invalid input",
+        "unknownError": "An unknown error occurred"
+    },
+    "theme": {
+        "light": "Light Mode",
+        "dark": "Dark Mode",
+        "toggle": "Toggle Theme"
+    },
+    "language": {
+        "english": "English",
+        "croatian": "Croatian",
+        "toggle": "Toggle Language"
+    }
+}

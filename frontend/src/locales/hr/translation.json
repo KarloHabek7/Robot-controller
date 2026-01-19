@@ -1,0 +1,90 @@
+{
+    "auth": {
+        "title": "UR5 Sustav Upravljanja Robotom",
+        "subtitle": "Prijavite se ili stvorite novi račun",
+        "login": "Prijava",
+        "signup": "Registracija",
+        "username": "Korisničko ime",
+        "email": "E-pošta",
+        "password": "Lozinka",
+        "signIn": "Prijavi se",
+        "createAccount": "Stvori račun",
+        "signingIn": "Prijava u tijeku...",
+        "creatingAccount": "Stvaranje računa...",
+        "logout": "Odjava",
+        "loginSuccess": "Uspješno prijavljeni",
+        "registrationSuccess": "Račun uspješno stvoren!",
+        "invalidCredentials": "Neispravno korisničko ime ili lozinka"
+    },
+    "robot": {
+        "control": "Upravljanje Robotom",
+        "connect": "Poveži se",
+        "disconnect": "Odspoji se",
+        "connected": "Povezano",
+        "disconnected": "Odspoјeno",
+        "connectionStatus": "Status Veze",
+        "host": "Host/IP Adresa",
+        "port": "Port",
+        "connectToRobot": "Poveži se na robot",
+        "emergencyStop": "Hitno Zaustavljanje",
+        "jointControl": "Upravljanje Zglobovima",
+        "tcpControl": "TCP Upravljanje",
+        "programControl": "Upravljanje Programom",
+        "position": "Pozicija",
+        "orientation": "Orijentacija"
+    },
+    "controls": {
+        "joint": "Zglob {{number}}",
+        "translate": "Translacija",
+        "rotate": "Rotacija",
+        "movePositive": "Pomakni +",
+        "moveNegative": "Pomakni -",
+        "value": "Vrijednost",
+        "degrees": "Stupnjevi",
+        "millimeters": "Milimetri",
+        "radians": "Radijani"
+    },
+    "programs": {
+        "start": "Pokreni Program",
+        "stop": "Zaustavi Program",
+        "programName": "Naziv Programa",
+        "running": "U izvođenju",
+        "stopped": "Zaustavljeno"
+    },
+    "logs": {
+        "commandLog": "Dnevnik Naredbi",
+        "timestamp": "Vrijeme",
+        "command": "Naredba",
+        "status": "Status",
+        "success": "Uspjeh",
+        "failed": "Neuspjeh",
+        "clear": "Obriši"
+    },
+    "common": {
+        "loading": "Učitavanje...",
+        "error": "Greška",
+        "success": "Uspjeh",
+        "cancel": "Otkaži",
+        "save": "Spremi",
+        "delete": "Obriši",
+        "edit": "Uredi",
+        "close": "Zatvori"
+    },
+    "errors": {
+        "connectionFailed": "Neuspješno povezivanje na robot",
+        "commandFailed": "Izvršavanje naredbe nije uspjelo",
+        "notConnected": "Niste povezani na robot",
+        "invalidInput": "Neispravan unos",
+        "unknownError": "Došlo je do nepoznate greške"
+    },
+    "theme": {
+        "light": "Svijetli Način",
+        "dark": "Tamni Način",
+        "toggle": "Promijeni Temu"
+    },
+    "language": {
+        "english": "Engleski",
+        "croatian": "Hrvatski",
+        "toggle": "Promijeni Jezik"
+    }
+}

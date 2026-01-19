@@ -3,30 +3,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Play, Square } from 'lucide-react';
 import { useState } from 'react';
-import { useRobotStore } from '@/stores/robotStore';
-import { urRobotService } from '@/services/urRobotService';
+import { useTranslation } from "react-i18next";
+import { api } from '@/services/api';
 import { toast } from 'sonner';
 
 const ProgramControl = () => {
-  const { currentProgramName, isProgramRunning, setCurrentProgramName, setProgramRunning } = useRobotStore();
-  const [localProgramName, setLocalProgramName] = useState(currentProgramName);
+  const { t } = useTranslation();
+  const [programName, setProgramName] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleStart = async () => {
-    if (!localProgramName.trim()) {
-      toast.error('Please enter a program name');
+    if (!programName.trim()) {
+      toast.error(t('errors.invalidInput'));
       return;
     }
 
     setIsLoading(true);
     try {
-      await urRobotService.startProgram(localProgramName);
-      setCurrentProgramName(localProgramName);
-      setProgramRunning(true);
-      toast.success(`Program "${localProgramName}" started`);
+      await api.startProgram(programName);
+      setIsRunning(true);
+      toast.success(`${t('programs.running')}: ${programName}`);
     } catch (error) {
-      toast.error('Failed to start program');
-      console.error(error);
+      toast.error(t('errors.commandFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -35,43 +34,42 @@ const ProgramControl = () => {
   const handleStop = async () => {
     setIsLoading(true);
     try {
-      await urRobotService.stopProgram();
-      setProgramRunning(false);
-      toast.success('Program stopped');
+      await api.stopProgram();
+      setIsRunning(false);
+      toast.success(t('programs.stopped'));
     } catch (error) {
-      toast.error('Failed to stop program');
-      console.error(error);
+      toast.error(t('errors.commandFailed'));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="card-premium rounded-xl p-4 shadow-lg">
+    <div className="bg-card border rounded-xl p-4 shadow-sm">
       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-        Program Control
+        {t('robot.programControl')}
       </h3>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div>
-          <Label className="text-xs text-muted-foreground">Program Name</Label>
+          <Label className="text-xs text-muted-foreground">{t('programs.programName')}</Label>
           <Input
             type="text"
-            value={localProgramName}
-            onChange={(e) => setLocalProgramName(e.target.value)}
-            placeholder="Enter program name"
-            className="mt-1 bg-background border-border h-8 text-sm"
-            disabled={isProgramRunning || isLoading}
+            value={programName}
+            onChange={(e) => setProgramName(e.target.value)}
+            placeholder={t('programs.programName')}
+            className="mt-1 bg-background border-border h-9 text-sm"
+            disabled={isRunning || isLoading}
           />
         </div>
 
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <div className="text-xs text-muted-foreground mb-1">Status</div>
+            <div className="text-[10px] text-muted-foreground mb-1">{t('logs.status')}</div>
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isProgramRunning ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+              <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
               <span className="text-xs font-semibold">
-                {isProgramRunning ? 'Running' : 'Stopped'}
+                {isRunning ? t('programs.running') : t('programs.stopped')}
               </span>
             </div>
           </div>
@@ -80,21 +78,22 @@ const ProgramControl = () => {
         <div className="grid grid-cols-2 gap-2">
           <Button
             onClick={handleStart}
-            disabled={isProgramRunning || isLoading}
+            disabled={isRunning || isLoading}
             size="sm"
-            className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white shadow-glow"
+            className="h-9 font-bold"
           >
             <Play className="h-4 w-4 mr-1" />
-            START
+            {t('programs.start')}
           </Button>
           <Button
             onClick={handleStop}
-            disabled={!isProgramRunning || isLoading}
+            disabled={!isRunning || isLoading}
             size="sm"
             variant="destructive"
+            className="h-9 font-bold"
           >
             <Square className="h-4 w-4 mr-1" />
-            STOP
+            {t('programs.stop')}
           </Button>
         </div>
       </div>

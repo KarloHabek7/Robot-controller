@@ -1,88 +1,84 @@
-import { useRobotStore } from '@/stores/robotStore';
+import { useState } from 'react';
+import { useTranslation } from "react-i18next";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import { ChevronUp, ChevronDown, RotateCcw } from 'lucide-react';
-import { urRobotService } from '@/services/urRobotService';
+import { api } from '@/services/api';
 import { toast } from 'sonner';
 
 const JointControlTable = () => {
-  const { currentConfig, updateJoint, setJointAngle, resetJoints } = useRobotStore();
+  const { t } = useTranslation();
 
-  // Step values for each joint (in radians, as per PDF specification)
+  // Local state for joints (simplified)
+  const [joints, setJoints] = useState([
+    { id: 1, name: 'Base', angle: 0, min: -360, max: 360 },
+    { id: 2, name: 'Shoulder', angle: 0, min: -360, max: 360 },
+    { id: 3, name: 'Elbow', angle: 0, min: -360, max: 360 },
+    { id: 4, name: 'Wrist 1', angle: 0, min: -360, max: 360 },
+    { id: 5, name: 'Wrist 2', angle: 0, min: -360, max: 360 },
+    { id: 6, name: 'Wrist 3', angle: 0, min: -360, max: 360 },
+  ]);
+
+  // Step values for each joint (in radians)
   const jointStepValues: { [key: number]: number } = {
-    1: 0.01, // Z1
-    2: 0.02, // Z2
-    3: 0.03, // Z3
-    4: 0.04, // Z4
-    5: 0.05, // Z5
-    6: 0.06, // Z6
+    1: 0.1, 2: 0.1, 3: 0.1, 4: 0.1, 5: 0.1, 6: 0.1
   };
 
-  if (!currentConfig) {
-    return (
-      <div className="card-premium rounded-xl p-6 text-center text-muted-foreground">
-        No robot configuration loaded
-      </div>
-    );
-  }
+  const setJointAngle = (id: number, angle: number) => {
+    setJoints(prev => prev.map(j => j.id === id ? { ...j, angle: parseFloat(angle.toFixed(2)) } : j));
+  };
 
   const handleJog = async (jointId: number, direction: '+' | '-') => {
-    const joint = currentConfig.joints.find(j => j.id === jointId);
+    const stepValue = jointStepValues[jointId] || 0.1;
+
+    // Convert radians to degrees for display (roughly 1 rad = 57.3 deg)
+    const deltaDegrees = (stepValue * 180) / Math.PI;
+    const joint = joints.find(j => j.id === jointId);
     if (!joint) return;
-    
-    const stepValue = jointStepValues[jointId] || 0.01;
-    const delta = direction === '+' ? stepValue : -stepValue;
-    
-    // Convert radians to degrees for display
-    const deltaDegrees = (delta * 180) / Math.PI;
-    
-    const newAngle = Math.max(
-      joint.minLimit,
-      Math.min(joint.maxLimit, joint.angle + deltaDegrees)
-    );
+
+    const newAngle = direction === '+' ? joint.angle + deltaDegrees : joint.angle - deltaDegrees;
     setJointAngle(jointId, newAngle);
 
-    // Send to robot backend
     try {
-      await urRobotService.moveJoint({
-        joint: jointId,
-        value: stepValue,
-        direction,
-      });
+      await api.jointMove(jointId, stepValue, direction);
     } catch (error) {
-      toast.error(`Failed to move joint ${jointId}`);
+      toast.error(t('errors.commandFailed'));
     }
   };
 
+  const resetJoints = () => {
+    setJoints(prev => prev.map(j => ({ ...j, angle: 0 })));
+    toast.success('Joints reset locally');
+  };
+
   return (
-    <div className="card-premium rounded-xl p-6 h-full flex flex-col">
+    <div className="bg-card border rounded-xl p-6 h-full flex flex-col shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-          Joint Control
+          {t('robot.jointControl')}
         </h3>
         <Button
           variant="outline"
           size="sm"
           onClick={resetJoints}
-          className="gap-2"
+          className="gap-2 h-8"
         >
           <RotateCcw className="w-4 h-4" />
-          Reset All
+          {t('logs.clear')}
         </Button>
       </div>
 
-      <div className="space-y-4 overflow-y-auto flex-1">
-        {currentConfig.joints.map((joint) => (
+      <div className="space-y-3 overflow-y-auto flex-1 pr-2">
+        {joints.map((joint) => (
           <div
             key={joint.id}
-            className="grid grid-cols-12 gap-4 items-center p-4 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition-colors border border-border/50"
+            className="grid grid-cols-12 gap-3 items-center p-3 rounded-lg bg-secondary/10 border border-border/50"
           >
             {/* Joint Name & ID */}
-            <div className="col-span-2">
-              <div className="text-xs text-muted-foreground">Z{joint.id} (Step: {jointStepValues[joint.id]}rad)</div>
-              <div className="text-sm font-semibold text-foreground">{joint.name}</div>
+            <div className="col-span-3">
+              <div className="text-[10px] text-muted-foreground">Z{joint.id}</div>
+              <div className="text-sm font-bold text-foreground leading-tight">{joint.name}</div>
             </div>
 
             {/* Jog Controls */}
@@ -92,7 +88,6 @@ const JointControlTable = () => {
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => handleJog(joint.id, '-')}
-                disabled={!joint.enabled}
               >
                 <ChevronDown className="w-4 h-4" />
               </Button>
@@ -101,59 +96,34 @@ const JointControlTable = () => {
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => handleJog(joint.id, '+')}
-                disabled={!joint.enabled}
               >
                 <ChevronUp className="w-4 h-4" />
               </Button>
             </div>
 
             {/* Angle Slider */}
-            <div className="col-span-4">
+            <div className="col-span-4 px-2">
               <Slider
                 value={[joint.angle]}
                 onValueChange={(values) => setJointAngle(joint.id, values[0])}
-                min={joint.minLimit}
-                max={joint.maxLimit}
+                min={joint.min}
+                max={joint.max}
                 step={0.1}
-                disabled={!joint.enabled}
                 className="w-full"
               />
-              <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                <span>{joint.minLimit}°</span>
-                <span>{joint.maxLimit}°</span>
-              </div>
             </div>
 
             {/* Current Angle */}
-            <div className="col-span-2">
-              <Input
-                type="number"
-                value={joint.angle.toFixed(1)}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  if (!isNaN(value)) {
-                    const clamped = Math.max(joint.minLimit, Math.min(joint.maxLimit, value));
-                    setJointAngle(joint.id, clamped);
-                  }
-                }}
-                disabled={!joint.enabled}
-                className="h-8 text-sm text-center"
-              />
-              <div className="text-xs text-muted-foreground text-center mt-1">degrees</div>
-            </div>
-
-            {/* Status Indicators */}
-            <div className="col-span-1 flex flex-col items-center gap-1">
-              <div className="text-xs text-muted-foreground">Load</div>
-              <div className="text-xs font-semibold">{joint.torque}%</div>
-            </div>
-
-            {/* Enable Switch */}
-            <div className="col-span-1 flex justify-center">
-              <Switch
-                checked={joint.enabled}
-                onCheckedChange={(checked) => updateJoint(joint.id, { enabled: checked })}
-              />
+            <div className="col-span-3">
+              <div className="flex items-center bg-background border rounded h-8 px-2">
+                <Input
+                  type="number"
+                  value={joint.angle}
+                  onChange={(e) => setJointAngle(joint.id, parseFloat(e.target.value) || 0)}
+                  className="border-0 p-0 h-6 text-sm text-center focus-visible:ring-0"
+                />
+                <span className="text-[10px] text-muted-foreground ml-1">°</span>
+              </div>
             </div>
           </div>
         ))}

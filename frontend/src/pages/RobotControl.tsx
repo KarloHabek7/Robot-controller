@@ -1,9 +1,7 @@
-import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import ConnectionStatus from "@/components/ConnectionStatus";
 import ControlPanel from "@/components/ControlPanel";
 import PositionDisplay from "@/components/PositionDisplay";
@@ -12,72 +10,71 @@ import JointControlTable from "@/components/JointControlTable";
 import CommandPanel from "@/components/CommandPanel";
 import RobotConfiguration from "@/components/RobotConfiguration";
 import ProgramControl from "@/components/ProgramControl";
-import { useRobotStore } from "@/stores/robotStore";
-import { urRobotService } from "@/services/urRobotService";
+import { Header } from "@/components/Header";
+import { api } from "@/services/api";
 
 export default function RobotControl() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [robotName, setRobotName] = useState("");
-  const { position, isConnected, setConnectionStatus, robotIP, robotPort } = useRobotStore();
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [robotConfig, setRobotConfig] = useState({ host: "127.0.0.1", port: 30002 });
+  const [position, setPosition] = useState({ x: 0, y: 0, z: 0 });
 
   useEffect(() => {
-    if (id) {
-      fetchRobotDetails(id);
-    }
-  }, [id]);
+    checkStatus();
+    const interval = setInterval(checkStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const fetchRobotDetails = async (robotId: string) => {
+  const checkStatus = async () => {
     try {
-      const { data, error } = await supabase
-        .from("robots")
-        .select("*")
-        .eq("id", robotId)
-        .single();
-
-      if (error) throw error;
-      
-      if (data) {
-        setRobotName(data.name);
-        // Update robot store position with database values
-        useRobotStore.getState().setPosition({
-          x: Number(data.x_coordinate),
-          y: Number(data.y_coordinate),
-          z: Number(data.z_coordinate),
-        });
+      const status = await api.getRobotStatus();
+      setIsConnected(status.connected);
+      if (status.host) {
+        setRobotConfig({ host: status.host, port: status.port });
       }
     } catch (error) {
-      console.error("Error fetching robot:", error);
-      toast.error("Failed to load robot details");
-      navigate("/");
-    } finally {
-      setLoading(false);
+      console.error("Error checking status:", error);
     }
   };
 
   const handleToggleConnection = async () => {
     if (isConnected) {
-      setConnectionStatus(false);
-      toast.success('Disconnected from robot');
+      try {
+        await api.disconnectRobot();
+        setIsConnected(false);
+        toast.success(t('robot.disconnected'));
+      } catch (error) {
+        toast.error(t('errors.commandFailed'));
+      }
     } else {
       try {
-        await urRobotService.connect(robotIP, robotPort);
-        setConnectionStatus(true);
-        toast.success('Connected to robot');
+        setLoading(true);
+        const result = await api.connectRobot(robotConfig.host, robotConfig.port);
+        if (result.success) {
+          setIsConnected(true);
+          toast.success(t('robot.connected'));
+        }
       } catch (error) {
-        toast.error('Failed to connect to robot');
+        toast.error(t('errors.connectionFailed'));
+      } finally {
+        setLoading(false);
       }
     }
   };
 
   const handleMove = async (direction: string, value?: number) => {
+    if (!isConnected) {
+      toast.error(t('errors.notConnected'));
+      return;
+    }
+
     if (direction === 'stop') {
       try {
-        await urRobotService.emergencyStop();
-        toast.success('Emergency stop activated');
+        await api.emergencyStop();
+        toast.success(t('robot.emergencyStop'));
       } catch (error) {
-        toast.error('Failed to stop robot');
+        toast.error(t('errors.commandFailed'));
       }
       return;
     }
@@ -103,68 +100,55 @@ export default function RobotControl() {
     const axis = axisMap[direction];
     const dir = directionMap[direction];
 
-    if (axis && dir && value) {
+    if (axis && dir && value !== undefined) {
       try {
-        await urRobotService.translateTCP({ axis, value, direction: dir });
-        toast.success(`Moved ${direction}`);
+        await api.tcpTranslate(axis, value, dir);
+        toast.success(`${t('controls.translate')} ${axis.toUpperCase()} ${dir}${value}`);
       } catch (error) {
-        toast.error('Failed to move robot');
+        toast.error(t('errors.commandFailed'));
       }
     }
   };
 
-  if (loading) {
+  if (loading && !isConnected) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20">
-      <div className="container mx-auto p-6">
-        <div className="mb-6 flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/")}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            {robotName} - Control Interface
-          </h1>
-        </div>
-
-        {/* Top Section - 3D Viewer and Joint Controls with equal heights */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-          {/* 3D Visualization */}
-          <div className="h-[600px]">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="container mx-auto p-4 md:p-6 space-y-6">
+        {/* Top Section - 3D Viewer and Joint Controls */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="h-[400px] md:h-[600px] rounded-xl overflow-hidden border bg-card shadow-sm">
             <Robot3DViewer />
           </div>
-
-          {/* Joint Control Table */}
-          <div className="h-[600px]">
+          <div className="h-auto xl:h-[600px]">
             <JointControlTable />
           </div>
         </div>
 
-        {/* Bottom Section - Flexible Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          {/* Left Column: Robot Configuration + Connection Status */}
-          <div className="xl:col-span-3 space-y-4">
-            <RobotConfiguration />
+        {/* Bottom Section - Responsive Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-6">
+          {/* Left Column */}
+          <div className="xl:col-span-3 space-y-6">
+            <RobotConfiguration
+              host={robotConfig.host}
+              port={robotConfig.port}
+              onChange={(host, port) => setRobotConfig({ host, port })}
+            />
             <ConnectionStatus
               connected={isConnected}
               onToggleConnection={handleToggleConnection}
             />
           </div>
 
-          {/* Middle Section: Position Display + TCP Controls */}
-          <div className="xl:col-span-5 space-y-4">
+          {/* Middle Column */}
+          <div className="xl:col-span-5 space-y-6">
             <PositionDisplay position={position} />
             <ControlPanel
               onMove={handleMove}
@@ -172,13 +156,13 @@ export default function RobotControl() {
             />
           </div>
 
-          {/* Right Column: Program Control + Command Interface */}
-          <div className="xl:col-span-4 space-y-4">
+          {/* Right Column */}
+          <div className="xl:col-span-4 space-y-6">
             <ProgramControl />
             <CommandPanel />
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,61 +1,58 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useTranslation } from "react-i18next";
+import { api, setToken, getToken } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Rocket } from 'lucide-react';
 import { z } from 'zod';
 
+const usernameSchema = z.string().min(3, 'Username must be at least 3 characters');
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
 export default function Auth() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   // Login form
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
   // Signup form
+  const [signupUsername, setSignupUsername] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
-  const [signupFullName, setSignupFullName] = useState('');
-  const [signupDisplayName, setSignupDisplayName] = useState('');
 
   useEffect(() => {
     // Check if user is already logged in
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/');
+      const token = getToken();
+      if (token) {
+        try {
+          await api.getCurrentUser();
+          navigate('/');
+        } catch (error) {
+          // Token invalid, stay on auth page
+        }
       }
       setCheckingAuth(false);
     };
 
     checkUser();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate('/');
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate inputs
+
     try {
-      emailSchema.parse(loginEmail);
+      usernameSchema.parse(loginUsername);
       passwordSchema.parse(loginPassword);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -67,22 +64,12 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword,
-      });
-
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          toast.error('Invalid email or password');
-        } else {
-          toast.error(error.message);
-        }
-      } else {
-        toast.success('Logged in successfully');
-      }
+      const response = await api.login(loginUsername, loginPassword);
+      setToken(response.access_token);
+      toast.success(t('auth.loginSuccess'));
+      navigate('/');
     } catch (error) {
-      toast.error('An unexpected error occurred');
+      toast.error(error instanceof Error ? error.message : t('auth.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -91,8 +78,8 @@ export default function Auth() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate inputs
     try {
+      usernameSchema.parse(signupUsername);
       emailSchema.parse(signupEmail);
       passwordSchema.parse(signupPassword);
     } catch (error) {
@@ -102,42 +89,15 @@ export default function Auth() {
       }
     }
 
-    if (!signupFullName.trim()) {
-      toast.error('Please enter your full name');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: signupEmail,
-        password: signupPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: signupFullName,
-            display_name: signupDisplayName || signupFullName,
-          }
-        }
-      });
-
-      if (error) {
-        if (error.message.includes('already registered')) {
-          toast.error('This email is already registered');
-        } else {
-          toast.error(error.message);
-        }
-      } else if (data.user) {
-        toast.success('Account created successfully! You can now log in.');
-        // Clear signup form
-        setSignupEmail('');
-        setSignupPassword('');
-        setSignupFullName('');
-        setSignupDisplayName('');
-      }
+      const response = await api.register(signupUsername, signupEmail, signupPassword);
+      setToken(response.access_token);
+      toast.success(t('auth.registrationSuccess'));
+      navigate('/');
     } catch (error) {
-      toast.error('An unexpected error occurred');
+      toast.error(error instanceof Error ? error.message : t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -145,46 +105,54 @@ export default function Auth() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Robot Control System
-          </CardTitle>
-          <CardDescription className="text-center">
-            Sign in to your account or create a new one
-          </CardDescription>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-xl border-2">
+        <CardHeader className="space-y-4 text-center">
+          <div className="flex justify-center">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <Rocket className="h-8 w-8 text-primary" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <CardTitle className="text-3xl font-bold tracking-tight">
+              {t('auth.title')}
+            </CardTitle>
+            <CardDescription className="text-sm">
+              {t('auth.subtitle')}
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="login" className="font-semibold">{t('auth.login')}</TabsTrigger>
+              <TabsTrigger value="signup" className="font-semibold">{t('auth.signup')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-username">{t('auth.username')}</Label>
                   <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="professor@university.edu"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
+                    id="login-username"
+                    type="text"
+                    placeholder="username"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
                     required
                     disabled={loading}
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password">{t('auth.password')}</Label>
                   <Input
                     id="login-password"
                     type="password"
@@ -193,20 +161,21 @@ export default function Auth() {
                     onChange={(e) => setLoginPassword(e.target.value)}
                     required
                     disabled={loading}
+                    className="h-11"
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white"
+                  className="w-full h-11 font-bold text-lg mt-2"
                   disabled={loading}
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      {t('auth.signingIn')}
                     </>
                   ) : (
-                    'Sign In'
+                    t('auth.signIn')
                   )}
                 </Button>
               </form>
@@ -215,42 +184,33 @@ export default function Auth() {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-full-name">Full Name</Label>
+                  <Label htmlFor="signup-username">{t('auth.username')}</Label>
                   <Input
-                    id="signup-full-name"
+                    id="signup-username"
                     type="text"
-                    placeholder="John Doe"
-                    value={signupFullName}
-                    onChange={(e) => setSignupFullName(e.target.value)}
+                    placeholder="username"
+                    value={signupUsername}
+                    onChange={(e) => setSignupUsername(e.target.value)}
                     required
                     disabled={loading}
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-display-name">Display Name (Optional)</Label>
-                  <Input
-                    id="signup-display-name"
-                    type="text"
-                    placeholder="Johnny"
-                    value={signupDisplayName}
-                    onChange={(e) => setSignupDisplayName(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">{t('auth.email')}</Label>
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="student@university.edu"
+                    placeholder="user@example.com"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     required
                     disabled={loading}
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password">{t('auth.password')}</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -259,20 +219,21 @@ export default function Auth() {
                     onChange={(e) => setSignupPassword(e.target.value)}
                     required
                     disabled={loading}
+                    className="h-11"
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white"
+                  className="w-full h-11 font-bold text-lg mt-2"
                   disabled={loading}
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      {t('auth.creatingAccount')}
                     </>
                   ) : (
-                    'Create Account'
+                    t('auth.createAccount')
                   )}
                 </Button>
               </form>
