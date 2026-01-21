@@ -28,7 +28,8 @@ class ApiClient {
             this.socket.close();
         }
 
-        const wsUrl = this.baseURL.replace('http', 'ws') + '/api/robot/ws';
+        const wsBase = this.baseURL.replace('http', 'ws');
+        const wsUrl = wsBase + '/api/robot/ws';
         console.log('[ApiClient] Connecting to WebSocket:', wsUrl);
         this.socket = new WebSocket(wsUrl);
 

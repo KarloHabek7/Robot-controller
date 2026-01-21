@@ -41,20 +41,8 @@ class ConnectionManager:
             if robot_client.is_connected():
                 state = await robot_client.read_state()
                 if state:
-                    # Convert joint radians to degrees
+                    # Convert radians to degrees for frontend convenience
                     state["joints"] = [math.degrees(q) for q in state["joints"]]
-                    
-                    # Convert TCP pose: [x, y, z] from meters to mm, [rx, ry, rz] from rad to deg
-                    tcp = state["tcp_pose"]
-                    state["tcp_pose"] = [
-                        tcp[0] * 1000.0,
-                        tcp[1] * 1000.0,
-                        tcp[2] * 1000.0,
-                        math.degrees(tcp[3]),
-                        math.degrees(tcp[4]),
-                        math.degrees(tcp[5])
-                    ]
-                    
                     await self.broadcast(json.dumps(state))
             await asyncio.sleep(0.1) # 10Hz update rate
         print("[RobotWS] Stopping state broadcast task")

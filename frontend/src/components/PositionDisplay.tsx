@@ -9,13 +9,24 @@ const PositionDisplay = ({ pose }: PositionDisplayProps) => {
   const { t } = useTranslation();
   const formatCoord = (value: number) => value.toFixed(2);
 
+  /* 
+    The robot sends:
+    - Position (X, Y, Z) in meters 
+    - Rotation (RX, RY, RZ) in radians
+
+    We need to convert:
+    - Meters -> Millimeters (* 1000)
+    - Radians -> Degrees (* 180 / Math.PI)
+  */
+  const toDegrees = (rad: number) => rad * (180 / Math.PI);
+
   const coords = [
-    { label: 'X', value: pose[0] || 0, unit: 'mm', color: 'text-blue-500' },
-    { label: 'Y', value: pose[1] || 0, unit: 'mm', color: 'text-emerald-500' },
-    { label: 'Z', value: pose[2] || 0, unit: 'mm', color: 'text-amber-500' },
-    { label: 'RX', value: pose[3] || 0, unit: '°', color: 'text-purple-500' },
-    { label: 'RY', value: pose[4] || 0, unit: '°', color: 'text-pink-500' },
-    { label: 'RZ', value: pose[5] || 0, unit: '°', color: 'text-rose-500' },
+    { label: 'X', value: (pose[0] || 0) * 1000, unit: 'mm', color: 'text-blue-500' },
+    { label: 'Y', value: (pose[1] || 0) * 1000, unit: 'mm', color: 'text-emerald-500' },
+    { label: 'Z', value: (pose[2] || 0) * 1000, unit: 'mm', color: 'text-amber-500' },
+    { label: 'RX', value: toDegrees(pose[3] || 0), unit: '°', color: 'text-purple-500' },
+    { label: 'RY', value: toDegrees(pose[4] || 0), unit: '°', color: 'text-pink-500' },
+    { label: 'RZ', value: toDegrees(pose[5] || 0), unit: '°', color: 'text-rose-500' },
   ];
 
   return (

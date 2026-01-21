@@ -30,15 +30,15 @@ export const useRobotStore = create<RobotState>((set) => ({
   port: null,
   joints: [
     { id: 1, name: 'Base', angle: 0, min: -360, max: 360 },
-    { id: 2, name: 'Shoulder', angle: 0, min: -360, max: 360 },
+    { id: 2, name: 'Shoulder', angle: -90, min: -360, max: 360 },
     { id: 3, name: 'Elbow', angle: 0, min: -360, max: 360 },
-    { id: 4, name: 'Wrist 1', angle: 0, min: -360, max: 360 },
+    { id: 4, name: 'Wrist 1', angle: -90, min: -360, max: 360 },
     { id: 5, name: 'Wrist 2', angle: 0, min: -360, max: 360 },
     { id: 6, name: 'Wrist 3', angle: 0, min: -360, max: 360 },
   ],
   tcpPose: [0, 0, 0, 0, 0, 0],
   robotModel: 'UR5',
-  targetJoints: [0, 0, 0, 0, 0, 0],
+  targetJoints: [0, -90, 0, -90, 0, 0],
   targetTcpPose: [0, 0, 0, 0, 0, 0],
   setConnectionStatus: (connected, host, port) =>
     set((state) => ({
