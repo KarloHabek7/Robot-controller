@@ -11,13 +11,14 @@ import CommandPanel from "@/components/CommandPanel";
 import RobotConfiguration from "@/components/RobotConfiguration";
 import ProgramControl from "@/components/ProgramControl";
 import { Header } from "@/components/Header";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { api } from "@/services/api";
 import { useRobotStore } from "@/stores/robotStore";
 
 export default function RobotControl() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const { isConnected, tcpPose, targetJoints, targetTcpPose, setConnectionStatus, setRobotState, setTargetState } = useRobotStore();
+  const { isConnected, tcpPose, targetJoints, targetTcpPose, setConnectionStatus, setRobotState, setTargetState, tcpVisualizationMode, setTCPVisualizationMode } = useRobotStore();
   const [robotConfig, setRobotConfig] = useState({ host: "192.168.15.130", port: 30002 });
 
   useEffect(() => {
@@ -145,6 +146,21 @@ export default function RobotControl() {
             <Robot3DViewer />
             {/* Overlay Gradient for depth */}
             <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-background/20 to-transparent" />
+
+            {/* TCP Visualization Mode Control */}
+            <div className="absolute bottom-4 left-4 z-10 bg-background/60 backdrop-blur-md rounded-lg border border-border/50 shadow-xl p-1">
+              <ToggleGroup type="single" value={tcpVisualizationMode} onValueChange={(value) => value && setTCPVisualizationMode(value as any)}>
+                <ToggleGroupItem value="real" aria-label="Real TCP" className="h-7 px-3 text-xs font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Real
+                </ToggleGroupItem>
+                <ToggleGroupItem value="linked" aria-label="Linked TCP" className="h-7 px-3 text-xs font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Linked
+                </ToggleGroupItem>
+                <ToggleGroupItem value="both" aria-label="Both" className="h-7 px-3 text-xs font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Both
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
           <div className="xl:col-span-5 flex flex-col">
             <JointControlTable />

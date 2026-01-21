@@ -17,11 +17,13 @@ interface RobotState {
   robotModel: string;
   targetJoints: number[];
   targetTcpPose: number[];
+  tcpVisualizationMode: 'real' | 'linked' | 'both';
   setConnectionStatus: (connected: boolean, host?: string, port?: number) => void;
   updateJoint: (id: number, angle: number) => void;
   setRobotState: (joints: number[], tcpPose: number[], model?: string) => void;
   setTargetState: (joints: number[], tcpPose: number[]) => void;
   setJoints: (joints: Joint[]) => void;
+  setTCPVisualizationMode: (mode: 'real' | 'linked' | 'both') => void;
 }
 
 export const useRobotStore = create<RobotState>((set) => ({
@@ -40,6 +42,7 @@ export const useRobotStore = create<RobotState>((set) => ({
   robotModel: 'UR5',
   targetJoints: [0, -90, 0, -90, 0, 0],
   targetTcpPose: [0, 0, 0, 0, 0, 0],
+  tcpVisualizationMode: 'linked',
   setConnectionStatus: (connected, host, port) =>
     set((state) => ({
       isConnected: connected,
@@ -59,4 +62,5 @@ export const useRobotStore = create<RobotState>((set) => ({
   setTargetState: (targetJoints, targetTcpPose) =>
     set({ targetJoints, targetTcpPose }),
   setJoints: (joints) => set({ joints }),
+  setTCPVisualizationMode: (tcpVisualizationMode) => set({ tcpVisualizationMode }),
 }));
