@@ -18,7 +18,7 @@ import { useRobotStore } from "@/stores/robotStore";
 export default function RobotControl() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const { isConnected, tcpPose, targetJoints, targetTcpPose, setConnectionStatus, setRobotState, setTargetState, tcpVisualizationMode, setTCPVisualizationMode } = useRobotStore();
+  const { isConnected, actualTcpPose, targetJoints, targetTcpPose, setConnectionStatus, syncActualState, updateTargetTcp, tcpVisualizationMode, setTCPVisualizationMode } = useRobotStore();
   const [robotConfig, setRobotConfig] = useState({ host: "192.168.15.130", port: 30002 });
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export default function RobotControl() {
 
     // Subscribe to real-time state
     api.subscribeToRobotState((state) => {
-      setRobotState(state.joints, state.tcp_pose, state.model);
+      syncActualState(state.joints, state.tcp_pose);
     });
 
     return () => {
@@ -117,7 +117,7 @@ export default function RobotControl() {
         const axisIndex = { 'x': 0, 'y': 1, 'z': 2 }[axis];
         if (axisIndex !== undefined) {
           newTarget[axisIndex] += (dir === '+' ? value : -value);
-          setTargetState(targetJoints, newTarget);
+          updateTargetTcp(newTarget);
         }
 
         await api.tcpTranslate(axis, value, dir);
@@ -186,7 +186,7 @@ export default function RobotControl() {
 
           {/* Middle Column */}
           <div className="xl:col-span-5 space-y-8">
-            <PositionDisplay pose={tcpPose} />
+            <PositionDisplay pose={actualTcpPose} />
             <ControlPanel
               onMove={handleMove}
               onGoToPosition={(x, y, z) => console.log('Go to:', x, y, z)}

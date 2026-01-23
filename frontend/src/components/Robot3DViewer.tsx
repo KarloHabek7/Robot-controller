@@ -119,7 +119,7 @@ const LinkedCoordinateFrame = ({
 };
 
 const TCPCoordinateSystem = ({ endEffectorNode }: { endEffectorNode: THREE.Object3D | null }) => {
-  const { tcpPose, isConnected, tcpVisualizationMode } = useRobotStore();
+  const { actualTcpPose, isConnected, tcpVisualizationMode } = useRobotStore();
 
   if (!isConnected) return null;
 
@@ -127,7 +127,7 @@ const TCPCoordinateSystem = ({ endEffectorNode }: { endEffectorNode: THREE.Objec
     <>
       {(tcpVisualizationMode === 'real' || tcpVisualizationMode === 'both') && (
         <CoordinateFrame
-          pose={tcpPose}
+          pose={actualTcpPose}
           label="TCP Real"
           opacity={tcpVisualizationMode === 'both' ? 0.5 : 1}
         />
@@ -135,7 +135,7 @@ const TCPCoordinateSystem = ({ endEffectorNode }: { endEffectorNode: THREE.Objec
       {(tcpVisualizationMode === 'linked' || tcpVisualizationMode === 'both') && endEffectorNode && (
         <LinkedCoordinateFrame
           endEffectorNode={endEffectorNode}
-          pose={tcpPose}
+          pose={actualTcpPose}
         />
       )}
     </>
@@ -251,14 +251,14 @@ const HighFidelityUR5 = ({
 
 
 const RobotScene = () => {
-  const { joints, targetJoints, isConnected } = useRobotStore();
-  const currentJointAngles = useRef<number[]>(joints.map(j => j.angle));
-  const [displayJoints, setDisplayJoints] = useState<number[]>(joints.map(j => j.angle));
+  const { actualJoints, targetJoints, isConnected } = useRobotStore();
+  const currentJointAngles = useRef<number[]>(actualJoints);
+  const [displayJoints, setDisplayJoints] = useState<number[]>(actualJoints);
   const [endEffectorNode, setEndEffectorNode] = useState<THREE.Object3D | null>(null);
 
   useFrame((state, delta) => {
     // Smoothly interpolate current position towards target from store
-    const target = joints.map(j => j.angle);
+    const target = actualJoints;
     let changed = false;
 
     const newAngles = currentJointAngles.current.map((angle, i) => {

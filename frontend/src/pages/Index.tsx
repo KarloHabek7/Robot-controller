@@ -8,7 +8,7 @@ import CommandPanel from '@/components/CommandPanel';
 import { useRobotStore } from '@/stores/robotStore';
 
 const Index = () => {
-  const { tcpPose, isConnected, setConnectionStatus, host, port } = useRobotStore();
+  const { actualTcpPose, isConnected, setConnectionStatus, host, port } = useRobotStore();
 
   const handleConfigChange = (newHost: string, newPort: number) => {
     setConnectionStatus(isConnected, newHost, newPort);
@@ -64,7 +64,7 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Position Display */}
           <div>
-            <PositionDisplay pose={tcpPose} />
+            <PositionDisplay pose={actualTcpPose} />
           </div>
 
           {/* Robot Configuration */}
