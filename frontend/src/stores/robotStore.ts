@@ -46,6 +46,8 @@ export function arePosesEqual(a: number[], b: number[]): boolean {
 // TYPES
 // ============================================================================
 
+export type ControlMode = 'joint' | 'tcp' | 'connection' | 'commands' | 'programs';
+
 interface JointMetadata {
   id: number;
   name: string;
@@ -64,6 +66,7 @@ interface RobotState {
   targetTcpPose: number[];     // [6] array: target TCP pose
 
   // === UI STATE ===
+  activeControlMode: ControlMode; // Current active tab
   isTargetDirty: boolean;      // true if target differs from actual
   isMoving: boolean;           // true when robot is executing movement
   movementProgress: number;    // 0-100, movement completion percentage
@@ -79,6 +82,8 @@ interface RobotState {
   tcpVisualizationMode: 'real' | 'linked' | 'both';
 
   // === ACTIONS ===
+  setActiveControlMode: (mode: ControlMode) => void;
+
   // Target manipulation
   updateTargetJoint: (id: number, angle: number) => void;
   updateTargetTcp: (pose: number[]) => void;
@@ -119,6 +124,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   targetTcpPose: [0, 0, 0, 0, 0, 0],
 
   // UI state
+  activeControlMode: 'joint',
   isTargetDirty: false,
   isMoving: false,
   movementProgress: 0,
@@ -141,6 +147,10 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   tcpVisualizationMode: 'linked',
 
   // === ACTIONS ===
+
+  setActiveControlMode: (mode: ControlMode) => {
+    set({ activeControlMode: mode });
+  },
 
   /**
    * Update a single target joint angle

@@ -3,8 +3,9 @@ import { OrbitControls, Grid, PerspectiveCamera, Environment, ContactShadows, us
 import * as THREE from 'three';
 import { useRobotStore } from '@/stores/robotStore';
 import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
+import { toast } from 'sonner';
+
 // Helper to map URSim coordinates [x, y, z] to Three.js space [y_ur, z_ur, x_ur]
-// Mapping: X_ur -> Z_three, Y_ur -> X_three, Z_ur -> Y_three (UP)
 const mapURToThree = (x: number, y: number, z: number): [number, number, number] => {
   return [y, z, x];
 };
@@ -22,7 +23,6 @@ const CoordinateFrame = ({
   positionOverride?: THREE.Vector3
 }) => {
   const groupRef = useRef<THREE.Group>(null);
-
   useFrame(() => {
     if (groupRef.current) {
       if (positionOverride) {
@@ -32,17 +32,14 @@ const CoordinateFrame = ({
         const [tx, ty, tz] = mapURToThree(pose[0], pose[1], pose[2]);
         groupRef.current.position.set(tx, ty, tz);
       }
-
       // Rotation Vector [rx, ry, rz]
       const rx = pose[3];
       const ry = pose[4];
       const rz = pose[5];
-
       // Map rotation axis using the same logic
       const [ax, ay, az] = mapURToThree(rx, ry, rz);
       const axis = new THREE.Vector3(ax, ay, az);
       const angle = axis.length();
-
       if (angle > 0.00001) {
         axis.normalize();
         groupRef.current.quaternion.setFromAxisAngle(axis, angle);
@@ -51,7 +48,6 @@ const CoordinateFrame = ({
       }
     }
   });
-
   return (
     <group ref={groupRef}>
       {/* X Axis - Red */}
@@ -60,7 +56,6 @@ const CoordinateFrame = ({
       <arrowHelper args={[new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 0.2, 0x00ff00, 0.05, 0.03]} />
       {/* Z Axis - Blue */}
       <arrowHelper args={[new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 0.2, 0x0000ff, 0.05, 0.03]} />
-
       <mesh>
         <sphereGeometry args={[0.005]} />
         <meshBasicMaterial color="white" transparent={opacity < 1} opacity={opacity} />
@@ -77,25 +72,19 @@ const LinkedCoordinateFrame = ({
   pose: number[]
 }) => {
   const groupRef = useRef<THREE.Group>(null);
-
   useFrame(() => {
     if (groupRef.current && endEffectorNode) {
-      // Calculate world position with offset
-      // Note: Model is in centimeters, but URSim coordinates are in meters
-      // This offset is in the model's local space (cm)
-      const offset = new THREE.Vector3(0, 0, -5); // Offset to end effector (5cm)
+      // Calculate world position with offset (5cm offset in local Z)
+      const offset = new THREE.Vector3(0, 0, -5);
       const worldPos = offset.applyMatrix4(endEffectorNode.matrixWorld);
-
       groupRef.current.position.copy(worldPos);
-
-      // Rotation from Pose (same as standard CoordinateFrame)
+      // Rotation from Pose
       const rx = pose[3];
       const ry = pose[4];
       const rz = pose[5];
       const [ax, ay, az] = mapURToThree(rx, ry, rz);
       const axis = new THREE.Vector3(ax, ay, az);
       const angle = axis.length();
-
       if (angle > 0.00001) {
         axis.normalize();
         groupRef.current.quaternion.setFromAxisAngle(axis, angle);
@@ -104,7 +93,6 @@ const LinkedCoordinateFrame = ({
       }
     }
   });
-
   return (
     <group ref={groupRef}>
       <arrowHelper args={[new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), 0.2, 0xff0000, 0.05, 0.03]} />
@@ -120,9 +108,7 @@ const LinkedCoordinateFrame = ({
 
 const TCPCoordinateSystem = ({ endEffectorNode }: { endEffectorNode: THREE.Object3D | null }) => {
   const { actualTcpPose, isConnected, tcpVisualizationMode } = useRobotStore();
-
   if (!isConnected) return null;
-
   return (
     <>
       {(tcpVisualizationMode === 'real' || tcpVisualizationMode === 'both') && (
@@ -147,17 +133,23 @@ const GlobalCoordinateSystem = () => {
 };
 
 // High-Fidelity UR5 Model Component
+interface HighFidelityUR5Props {
+  jointAngles: number[];
+  opacity?: number;
+  isGhost?: boolean;
+  ghostMode?: 'setting' | 'moving' | 'reached';
+  onEndEffectorFound?: (node: THREE.Object3D) => void;
+  groupRef?: React.MutableRefObject<THREE.Group | null>;
+}
+
 const HighFidelityUR5 = ({
   jointAngles,
   opacity = 1,
   isGhost = false,
-  onEndEffectorFound
-}: {
-  jointAngles: number[],
-  opacity?: number,
-  isGhost?: boolean,
-  onEndEffectorFound?: (node: THREE.Object3D) => void
-}) => {
+  ghostMode = 'setting',
+  onEndEffectorFound,
+  groupRef
+}: HighFidelityUR5Props) => {
   const { scene: gltfScene } = useGLTF('/models/UR5.glb');
 
   // Clone the scene and materials so real and ghost don't share state
@@ -166,14 +158,12 @@ const HighFidelityUR5 = ({
     clone.traverse((obj) => {
       if ((obj as THREE.Mesh).isMesh) {
         const mesh = obj as THREE.Mesh;
-
         // Handle single or multi-material meshes
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         const newMaterials = materials.map(mat => {
           const m = mat.clone() as THREE.MeshStandardMaterial;
           m.transparent = opacity < 1;
           m.opacity = opacity;
-
           if (!isGhost && opacity === 1) {
             m.depthWrite = true;
             m.depthTest = true;
@@ -181,17 +171,27 @@ const HighFidelityUR5 = ({
           } else if (isGhost) {
             m.depthWrite = true;
             m.depthTest = true;
-            // Ghost color: desaturated blueish gray, lerp towards it to keep some original color
-            m.color.lerp(new THREE.Color('#94a3b8'), 0.8);
+            // Determine ghost color based on mode
+            let targetColor = new THREE.Color('#94a3b8'); // Default gray
+            if (ghostMode === 'setting') {
+              // Cyan/Blue for setting target
+              targetColor = new THREE.Color(0.3, 0.7, 1.0);
+            } else if (ghostMode === 'moving') {
+              // Green for moving
+              targetColor = new THREE.Color(0.3, 1.0, 0.5);
+            }
+            // Lerp towards the target color to keep some original shading
+            m.color.lerp(targetColor, 0.6);
+            m.emissive = targetColor;
+            m.emissiveIntensity = 0.2;
           }
           return m;
         });
-
         mesh.material = Array.isArray(mesh.material) ? newMaterials : newMaterials[0];
       }
     });
     return clone;
-  }, [gltfScene, opacity, isGhost]);
+  }, [gltfScene, opacity, isGhost, ghostMode]);
 
   // Find nodes and store their INITIAL orientations
   const { nodes, initialQuats } = useMemo(() => {
@@ -218,9 +218,6 @@ const HighFidelityUR5 = ({
     const toRad = (deg: number) => (deg * Math.PI) / 180;
     const q = jointAngles.map(toRad);
 
-    // We apply rotations AS DELTAS to the initial quaternions
-    // to preserve whatever '0' rotation was in the GLB.
-
     const applyRotation = (name: string, angle: number, axisName: 'x' | 'y' | 'z') => {
       const node = nodes[name];
       const initial = initialQuats[name];
@@ -232,7 +229,6 @@ const HighFidelityUR5 = ({
       }
     };
 
-    // Negating the angles to match URSim's positive rotation direction relative to this model's local axes
     applyRotation('Link1', -q[0], 'x');
     applyRotation('Link2', -q[1], 'x');
     applyRotation('Link3', q[2], 'z');
@@ -242,25 +238,45 @@ const HighFidelityUR5 = ({
   });
 
   return (
-    <group rotation={[0, Math.PI / 2, 0]}>
+    <group ref={groupRef} rotation={[0, Math.PI / 2, 0]}>
       <primitive object={scene} />
     </group>
   );
 };
 
-
-
 const RobotScene = () => {
-  const { actualJoints, targetJoints, isConnected } = useRobotStore();
+  const {
+    actualJoints,
+    targetJoints,
+    isConnected,
+    isTargetDirty,
+    isMoving,
+    targetTcpPose
+  } = useRobotStore();
+
   const currentJointAngles = useRef<number[]>(actualJoints);
   const [displayJoints, setDisplayJoints] = useState<number[]>(actualJoints);
   const [endEffectorNode, setEndEffectorNode] = useState<THREE.Object3D | null>(null);
 
+  // Animation state for ghost robot
+  const ghostRef = useRef<THREE.Group>(null);
+  const [reachAnimation, setReachAnimation] = useState(0);
+  const prevMoving = useRef(isMoving);
+
+  // Detect when robot reaches target
+  useEffect(() => {
+    if (prevMoving.current && !isMoving && !isTargetDirty) {
+      // Robot just finished moving and reached target
+      setReachAnimation(1.0); // Start 1 second animation
+      toast.success('Target position reached!');
+    }
+    prevMoving.current = isMoving;
+  }, [isMoving, isTargetDirty]);
+
   useFrame((state, delta) => {
-    // Smoothly interpolate current position towards target from store
+    // 1. Smoothly interpolate actual robot position
     const target = actualJoints;
     let changed = false;
-
     const newAngles = currentJointAngles.current.map((angle, i) => {
       const step = (target[i] - angle) * Math.min(delta * 10, 1.0);
       if (Math.abs(step) > 0.001) {
@@ -274,7 +290,30 @@ const RobotScene = () => {
       currentJointAngles.current = newAngles;
       setDisplayJoints([...newAngles]);
     }
+
+    // 2. Handle Reach Animation (Pulse effect)
+    if (reachAnimation > 0 && ghostRef.current) {
+      // Pulse effect: scale briefly up and down
+      // Sine wave from 0 to PI (one hump)
+      const progress = 1.0 - reachAnimation; // 0 to 1
+      const scale = 1 + Math.sin(progress * Math.PI * 2) * 0.05;
+      ghostRef.current.scale.setScalar(scale);
+      setReachAnimation(prev => Math.max(0, prev - delta * 2)); // Speed up animation 2x
+    } else if (ghostRef.current && reachAnimation === 0) {
+      ghostRef.current.scale.setScalar(1);
+    }
   });
+
+  // Calculate ghost opacity based on animation
+  const getGhostOpacity = () => {
+    if (reachAnimation > 0) {
+      // Fade out during animation
+      return 0.4 * (reachAnimation);
+    }
+    return isMoving ? 0.5 : 0.4;
+  };
+
+  const showGhost = isTargetDirty || reachAnimation > 0;
 
   return (
     <group>
@@ -284,13 +323,34 @@ const RobotScene = () => {
           <meshStandardMaterial color="gray" wireframe />
         </mesh>
       }>
+        {/* ACTUAL Robot - Always visible, opaque */}
         <HighFidelityUR5
           jointAngles={displayJoints}
           isGhost={!isConnected}
           opacity={isConnected ? 1 : 0.8}
           onEndEffectorFound={setEndEffectorNode}
         />
-        {isConnected && <HighFidelityUR5 jointAngles={targetJoints} opacity={0.3} isGhost={true} />}
+
+        {/* TARGET/Shadow Robot - Only when dirty or animating */}
+        {isConnected && showGhost && (
+          <HighFidelityUR5
+            groupRef={ghostRef}
+            jointAngles={targetJoints}
+            opacity={getGhostOpacity()}
+            isGhost={true}
+            ghostMode={isMoving ? 'moving' : 'setting'}
+          />
+        )}
+
+        {/* Target TCP Frame - Only when dirty */}
+        {isConnected && isTargetDirty && (
+          <CoordinateFrame
+            pose={targetTcpPose}
+            label="Target TCP"
+            opacity={0.5}
+          />
+        )}
+
         <TCPCoordinateSystem endEffectorNode={endEffectorNode} />
         <GlobalCoordinateSystem />
       </Suspense>
@@ -302,8 +362,9 @@ const Robot3DViewer = () => {
   const { isConnected } = useRobotStore();
 
   return (
-    <div className="w-full h-full min-h-[400px] relative group bg-gradient-to-b from-background to-secondary/5">
-      <Canvas shadows dpr={[1, 2]}>
+    // Changed: Removed min-h-[400px], added h-full w-full to fill parent
+    <div className="w-full h-full relative group bg-gradient-to-b from-background to-secondary/5 overflow-hidden">
+      <Canvas shadows dpr={[1, 2]} className="w-full h-full">
         <PerspectiveCamera makeDefault position={[4, 3, 4]} fov={45} />
         <OrbitControls
           enableDamping
@@ -312,13 +373,10 @@ const Robot3DViewer = () => {
           maxDistance={12}
           makeDefault
         />
-
         <ambientLight intensity={0.4} />
         <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
         <pointLight position={[-10, -10, -10]} intensity={0.5} color="#3b82f6" />
-
         <Environment preset="city" />
-
         <Grid
           infiniteGrid
           cellSize={0.5}
@@ -330,9 +388,7 @@ const Robot3DViewer = () => {
           cellColor="#64748b"
           sectionColor="#3b82f6"
         />
-
         <RobotScene />
-
         <ContactShadows
           position={[0, 0, 0]}
           opacity={0.4}

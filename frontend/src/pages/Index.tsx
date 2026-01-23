@@ -1,14 +1,25 @@
 import { toast } from 'sonner';
 import ConnectionStatus from '@/components/ConnectionStatus';
-import PositionDisplay from '@/components/PositionDisplay';
+import PositionDisplayCompact from '@/components/PositionDisplayCompact';
 import Robot3DViewer from '@/components/Robot3DViewer';
 import JointControlTable from '@/components/JointControlTable';
 import RobotConfiguration from '@/components/RobotConfiguration';
 import CommandPanel from '@/components/CommandPanel';
+import { ControlModeSwitcher } from '@/components/ControlModeSwitcher';
+import ControlPanel from '@/components/ControlPanel';
+import ProgramControl from '@/components/ProgramControl';
 import { useRobotStore } from '@/stores/robotStore';
 
 const Index = () => {
-  const { actualTcpPose, isConnected, setConnectionStatus, host, port } = useRobotStore();
+  const {
+    actualTcpPose,
+    isConnected,
+    setConnectionStatus,
+    host,
+    port,
+    activeControlMode,
+    setActiveControlMode
+  } = useRobotStore();
 
   const handleConfigChange = (newHost: string, newPort: number) => {
     setConnectionStatus(isConnected, newHost, newPort);
@@ -17,7 +28,6 @@ const Index = () => {
   const handleToggleConnection = () => {
     const newStatus = !isConnected;
     setConnectionStatus(newStatus);
-
     if (newStatus) {
       toast.success("Connected to robot (demo mode)!");
     } else {
@@ -26,59 +36,92 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background relative overflow-hidden">
-      {/* Diagonal gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/5 pointer-events-none" />
-
-      <div className="container mx-auto p-6 relative z-10 max-w-[1800px]">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2 tracking-tight">
-              Robot Control Interface
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Professional robot control and monitoring system
-            </p>
+    <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
+      {/* Header - Fixed Height */}
+      <div className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary font-bold">
+            UR
           </div>
-          <ConnectionStatus
-            isConnected={isConnected}
-            onToggleConnection={handleToggleConnection}
-          />
-        </div>
-
-        {/* Top Section - 3D Viewer and Joint Controls */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-          {/* 3D Visualization */}
           <div>
+            <h1 className="text-lg font-bold leading-none">UR5 Controller</h1>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Professional Interface</p>
+          </div>
+        </div>
+        <ConnectionStatus
+          isConnected={isConnected}
+          onToggleConnection={handleToggleConnection}
+        />
+      </div>
+
+      {/* Main Content - Split Pane Layout */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+
+        {/* Left Pane: 3D Viewer (Top on mobile, Left on Desktop) */}
+        {/* Mobile: 50vh height. Desktop: 40% width, full height */}
+        <div className="w-full lg:w-[40%] h-[50vh] lg:h-full flex-shrink-0 bg-secondary/10 relative border-b lg:border-b-0 lg:border-r border-border">
+          <div className="robot-viewer-container w-full h-full">
             <Robot3DViewer />
           </div>
-
-          {/* Joint Control Table */}
-          <div>
-            <JointControlTable />
-          </div>
         </div>
 
-        {/* Bottom Section - Configuration, Position, and Commands */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Position Display */}
-          <div>
-            <PositionDisplay pose={actualTcpPose} />
-          </div>
+        {/* Right Pane: Controls (Bottom on mobile, Right on Desktop) */}
+        {/* Mobile: Remaining height. Desktop: 60% width, full height */}
+        <div className="w-full lg:w-[60%] flex flex-col h-full bg-card/30">
 
-          {/* Robot Configuration */}
-          <div>
-            <RobotConfiguration
-              host={host || "192.168.15.130"}
-              port={port || 30002}
-              onChange={handleConfigChange}
+          {/* 1. Mode Switcher (Fixed at top of control panel) */}
+          <div className="p-2 border-b bg-card/50 backdrop-blur-sm z-10">
+            <ControlModeSwitcher
+              activeMode={activeControlMode}
+              onModeChange={setActiveControlMode}
             />
           </div>
 
-          {/* Command Panel */}
-          <div>
-            <CommandPanel />
+          {/* 2. Active Control Panel (Scrollable Area) */}
+          <div className="flex-1 overflow-y-auto control-panel-scroll p-4 md:p-6">
+            <div className="max-w-4xl mx-auto">
+              {activeControlMode === 'joint' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <JointControlTable />
+                </div>
+              )}
+              {activeControlMode === 'tcp' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <ControlPanel />
+                </div>
+              )}
+              {activeControlMode === 'connection' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="p-4 bg-muted/30 rounded-lg border">
+                    <h3 className="font-medium mb-2">Connection Status</h3>
+                    <ConnectionStatus
+                      isConnected={isConnected}
+                      onToggleConnection={handleToggleConnection}
+                    />
+                  </div>
+                  <RobotConfiguration
+                    host={host || "192.168.15.130"}
+                    port={port || 30002}
+                    onChange={handleConfigChange}
+                  />
+                </div>
+              )}
+              {activeControlMode === 'commands' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <CommandPanel />
+                </div>
+              )}
+              {activeControlMode === 'programs' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <ProgramControl />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. Compact Position Display (Fixed at bottom) */}
+          <div className="p-2 border-t bg-card z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <PositionDisplayCompact pose={actualTcpPose} />
           </div>
         </div>
       </div>

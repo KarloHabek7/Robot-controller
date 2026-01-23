@@ -6,71 +6,53 @@
   :root {
     --background: 210 20% 98%;
     --foreground: 222 47% 11%;
-
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-
     --primary: 215 89% 45%;
     --primary-foreground: 210 40% 98%;
-
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
     --accent: 215 89% 45%;
     --accent-foreground: 210 40% 98%;
-
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 215 89% 45%;
-
     --radius: 1rem;
   }
-
+ 
   .dark {
     --background: 222 47% 4%;
     --foreground: 210 40% 98%;
-
     --card: 222 47% 6%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222 47% 6%;
     --popover-foreground: 210 40% 98%;
-
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
     --secondary: 217.2 32.6% 12%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 217.2 32.6% 12%;
     --muted-foreground: 215 20.2% 65.1%;
-
     --accent: 217.2 91.2% 59.8%;
     --accent-foreground: 222.2 47.4% 11.2%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217.2 32.6% 15%;
     --input: 217.2 32.6% 15%;
     --ring: 224.3 76.3% 48%;
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground transition-colors duration-500;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -93,15 +75,46 @@
   @apply backdrop-blur-md bg-white/5 dark:bg-black/20 border border-white/10 dark:border-white/5;
 }
 
+/* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   @apply bg-transparent;
 }
-
 ::-webkit-scrollbar-thumb {
   @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Task 6 Specific Layout Utilities */
+
+/* Ensure 3D viewer fills its container */
+.robot-viewer-container {
+  height: 100%;
+  min-height: 300px;
+}
+
+/* Scrollable control area */
+.control-panel-scroll {
+  overflow-y: auto;
+  /* Fallback if calc fails, though flex usually handles this */
+  max-height: 100%; 
+}
+
+/* Compact position display */
+.position-display-compact {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
