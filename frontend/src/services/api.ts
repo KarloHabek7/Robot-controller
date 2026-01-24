@@ -148,7 +148,7 @@ class ApiClient {
     }
 
     async getRobotStatus() {
-        return this.request<{ connected: boolean; host: string; port: number }>(
+        return this.request<{ connected: boolean; host: string; port: number; speed_control_supported: boolean }>(
             '/api/robot/status'
         );
     }

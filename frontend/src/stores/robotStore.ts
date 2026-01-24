@@ -81,6 +81,7 @@ interface RobotState {
   robotModel: string;
   tcpVisualizationMode: 'real' | 'linked' | 'both';
   robotSpeed: number; // 0-100%
+  speedControlSupported: boolean; // True if robot supports RTDE speed control
   isEStopActive: boolean;
 
   // === ACTIONS ===
@@ -105,13 +106,14 @@ interface RobotState {
   updateJointIncrement: (id: number, increment: number) => void;
 
   // Connection
-  setConnectionStatus: (connected: boolean, host?: string, port?: number) => void;
+  setConnectionStatus: (connected: boolean, host?: string, port?: number, speedControlSupported?: boolean) => void;
 
   // TCP visualization
   setTCPVisualizationMode: (mode: 'real' | 'linked' | 'both') => void;
 
   // Speed control
   setRobotSpeed: (speed: number) => void;
+  setSpeedControlSupported: (supported: boolean) => void;
 
   // E-Stop
   setEStopActive: (active: boolean) => void;
@@ -154,6 +156,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   robotModel: 'UR5',
   tcpVisualizationMode: 'linked',
   robotSpeed: 50,
+  speedControlSupported: true, // Assume true until we check
   isEStopActive: false,
 
   // === ACTIONS ===
@@ -338,12 +341,13 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   /**
    * Update connection status
    */
-  setConnectionStatus: (connected: boolean, host?: string, port?: number) => {
-    set((state) => ({
-      isConnected: connected,
-      host: host ?? state.host,
-      port: port ?? state.port,
-    }));
+  setConnectionStatus: (isConnected: boolean, host: string = null, port: number = null, speedControlSupported: boolean = false) => {
+    set({
+      isConnected,
+      host,
+      port,
+      speedControlSupported: isConnected ? speedControlSupported : false
+    });
   },
 
   /**
@@ -358,6 +362,13 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    */
   setRobotSpeed: (robotSpeed: number) => {
     set({ robotSpeed });
+  },
+
+  /**
+   * Set speed control supported flag
+   */
+  setSpeedControlSupported: (speedControlSupported: boolean) => {
+    set({ speedControlSupported });
   },
 
   /**

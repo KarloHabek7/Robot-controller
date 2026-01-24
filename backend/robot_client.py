@@ -70,12 +70,19 @@ class RobotTCPClient:
             # RTDE connection (Port 30004)
             try:
                 self.rtde_reader, self.rtde_writer = await asyncio.open_connection(host, 30004)
+                print(f"[RobotClient] RTDE socket connected to {host}:30004")
                 if await self._rtde_handshake():
                     self.rtde_connected = True
-                    print(f"[RobotClient] RTDE connected and synchronized on {host}:30004")
+                    print(f"[RobotClient] RTDE fully synchronized on {host}:30004")
                 else:
                     print("[RobotClient] RTDE handshake failed")
                     self.rtde_connected = False
+                    # Close the connection if handshake failed
+                    if self.rtde_writer:
+                        self.rtde_writer.close()
+                        await self.rtde_writer.wait_closed()
+                    self.rtde_reader = None
+                    self.rtde_writer = None
             except Exception as re:
                 print(f"[RobotClient] RTDE connection failed: {re}")
                 self.rtde_connected = False
@@ -88,10 +95,12 @@ class RobotTCPClient:
             if self.feedback_connected:
                 self.feedback_task = asyncio.create_task(self._feedback_listener())
 
+            # Start RTDE listener if connected
             if self.rtde_connected:
                 self.rtde_task = asyncio.create_task(self._rtde_listener())
+                print("[RobotClient] RTDE listener started")
             else:
-                print("[RobotClient] RTDE not connected, speed control will use script fallback")
+                print("[RobotClient] RTDE not available, using URScript for speed control")
 
             return True
         except Exception as e:
@@ -153,13 +162,15 @@ class RobotTCPClient:
             return False
         
         try:
-            # Wrap in a secondary program for better execution on port 30002
-            if "def " not in urscript:
-                command = f"def secondary_program():\n  {urscript}\nend\n"
-            else:
-                command = urscript
-                if not command.endswith("\n"):
-                    command += "\n"
+            command = urscript
+            # Ensure it ends with a newline
+            if not command.endswith("\n"):
+                command += "\n"
+
+            # ONLY wrap in 'def' if it's a multi-line script and doesn't have one already
+            # For single-line commands like 'set_speed_slider_fraction', send RAW for immediate execution
+            if "\n" in urscript.strip() and "def " not in urscript:
+                command = f"def secondary_program():\n{command}end\n"
                     
             self.writer.write(command.encode())
             await self.writer.drain()
@@ -207,8 +218,9 @@ class RobotTCPClient:
             error_msgs = []
             for _ in range(5):
                 res_len, res_type, res_data = await self._read_rtde_package()
+                print(f"[RobotClient] RTDE: Received type={res_type}, len={res_len}, data={res_data.hex()}")
                 if res_type == self.RTDE_TEXT_MESSAGE:
-                    msg = res_data[1:].decode(errors='ignore')
+                    msg = res_data[1:].decode(errors='ignore') if len(res_data) > 1 else res_data.decode(errors='ignore')
                     error_msgs.append(msg)
                     print(f"[RTDE Error] {msg}")
                     continue
@@ -225,8 +237,9 @@ class RobotTCPClient:
                 await self._send_rtde_package(self.RTDE_REQUEST_PROTOCOL_VERSION, payload)
                 for _ in range(5):
                     res_len, res_type, res_data = await self._read_rtde_package()
+                    print(f"[RobotClient] RTDE: Received type={res_type}, len={res_len}, data={res_data.hex()}")
                     if res_type == self.RTDE_TEXT_MESSAGE:
-                        msg = res_data[1:].decode(errors='ignore')
+                        msg = res_data[1:].decode(errors='ignore') if len(res_data) > 1 else res_data.decode(errors='ignore')
                         error_msgs.append(msg)
                         print(f"[RTDE Error] {msg}")
                         continue
@@ -315,23 +328,25 @@ class RobotTCPClient:
         print("[RobotClient] RTDE listener stopped")
 
     async def set_robot_speed(self, fraction: float) -> bool:
-        """Set the speed slider using RTDE or Dashboard fallback."""
-        # 1. Try RTDE if connected
-        if self.rtde_connected:
-            try:
-                payload = struct.pack(">BId", self.rtde_input_recipe_id, 1, fraction)
-                await self._send_rtde_package(self.RTDE_DATA_PACKAGE, payload)
-                return True
-            except Exception:
-                self.rtde_connected = False
-
-        # 2. Try Dashboard "set speed"
-        if self.dashboard_connected:
-            resp = await self.send_dashboard_command(f"set speed {fraction}")
-            if resp and "set speed" in resp.lower():
-                return True
-
-        return False
+        """Set the speed slider using URScript."""
+        # Clamp value between 0.0 and 1.0 for safety
+        safe_fraction = max(0.0, min(1.0, fraction))
+        
+        # Store the target speed for UI feedback (since we can't read it back)
+        self.rtde_speed_slider = safe_fraction
+        
+        print(f"[RobotClient] Setting speed slider to {safe_fraction*100:.1f}% (raw value: {safe_fraction})")
+        
+        # Send raw command (newline handled by send_command)
+        script = f"set_speed_slider_fraction({safe_fraction})"
+        success = await self.send_command(script)
+        
+        if success:
+            print(f"[RobotClient] Speed command sent successfully")
+        else:
+            print(f"[RobotClient] Speed command FAILED")
+            
+        return success
 
     def is_connected(self) -> bool:
         return self.connected
@@ -378,31 +393,9 @@ class RobotTCPClient:
                     speed_slider = self.rtde_speed_slider
                     
                     if not self.rtde_connected:
-                        # FALLBACK SCANNER: Try to find the speed slider in port 30003 packet
-                        # We use 1.0 as initial fallback
-                        speed_slider = 1.0
-                        
-                        # 1. Try cached offset if we found one before
-                        if self._speed_offset_cache is not None:
-                            speed_slider = struct.unpack('!d', data[self._speed_offset_cache:self._speed_offset_cache+8])[0]
-                        else:
-                            # 2. Brute force scan for anything between 0.05 and 1.0 (excluding joint offsets)
-                            # Start scan after joints/tcp (offset 600+)
-                            found_vals = []
-                            for off in range(600, length - 8, 8):
-                                v = struct.unpack('!d', data[off:off+8])[0]
-                                # Look for common scale values (like 0.1, 0.25, 0.5, 0.75, 1.0)
-                                # and exclude known non-slider fields if possible
-                                if 0.01 < v <= 1.0:
-                                    found_vals.append((off, v))
-                            
-                            if found_vals:
-                                # Prioritize offsets around 940 or 1052
-                                best_match = min(found_vals, key=lambda x: min(abs(x[0]-940), abs(x[0]-1052)))
-                                speed_slider = best_match[1]
-                                # If it's not 1.0, maybe cache it? For now just use it.
-                                if packet_count % 250 == 0:
-                                    print(f"[RobotClient] Speed Scanner Found: {', '.join([f'{o}:{v:.2f}' for o,v in found_vals[:4]])}")
+                        # URSim 5.12.6 does not transmit speed slider in 30003 feedback
+                        # We keep the last speed value the user set via the UI
+                        speed_slider = self.rtde_speed_slider
 
                     self.latest_state = {
                         "joints": list(q_actual),
@@ -412,8 +405,10 @@ class RobotTCPClient:
                     }
                     
                     if packet_count % 125 == 0:
-                        mode = "RTDE" if self.rtde_connected else "SCAN"
-                        print(f"[RobotClient] Update [{mode}]: Speed={speed_slider*100:.1f}%")
+                        if self.rtde_connected:
+                            print(f"[RobotClient] Update [RTDE]: J1={q_actual[0]:.2f}, Speed={speed_slider*100:.1f}%")
+                        else:
+                            print(f"[RobotClient] Update: J1={q_actual[0]:.2f}, TCPz={tcp_actual[2]:.2f}")
                 
                 await asyncio.sleep(0)
             except Exception as e:

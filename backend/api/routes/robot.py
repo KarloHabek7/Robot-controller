@@ -73,6 +73,12 @@ class CommandRequest(BaseModel):
     value: float
     direction: str
 
+class RobotStatus(BaseModel):
+    connected: bool
+    host: Optional[str] = None
+    port: Optional[int] = None
+    speed_control_supported: bool = False  # True if RTDE is available
+
 class JointMoveRequest(BaseModel):
     joint: int
     value: float
@@ -115,13 +121,14 @@ async def disconnect_robot(current_user: User = Depends(get_current_user)):
     await robot_client.disconnect()
     return {"success": True, "message": "Disconnected from robot"}
 
-@router.get("/status")
+@router.get("/status", response_model=RobotStatus)
 async def get_status():
-    return {
-        "connected": robot_client.is_connected(),
-        "host": robot_client.host,
-        "port": robot_client.port
-    }
+    return RobotStatus(
+        connected=robot_client.is_connected(),
+        host=robot_client.host,
+        port=robot_client.port,
+        speed_control_supported=robot_client.rtde_connected
+    )
 
 def generate_translation_script(axis: str, value: float, direction: str) -> str:
     axis_index = {"x": 0, "y": 1, "z": 2}[axis.lower()]

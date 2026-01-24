@@ -6,25 +6,33 @@ import { api } from '@/services/api';
 import { toast } from 'sonner';
 
 export const SpeedControl = () => {
-    const { robotSpeed, setRobotSpeed, isConnected } = useRobotStore();
+    const robotSpeed = useRobotStore((state) => state.robotSpeed);
+    const setRobotSpeed = useRobotStore((state) => state.setRobotSpeed);
+    const isConnected = useRobotStore((state) => state.isConnected);
+    const speedControlSupported = useRobotStore((state) => state.speedControlSupported);
     const [localValue, setLocalValue] = useState(robotSpeed);
-    const [isDragging, setIsDragging] = useState(false);
+    const [isChanging, setIsChanging] = useState(false);
     const lastCommitTime = useRef<number>(0);
 
-    // Sync local value with store when not dragging and after a grace period from last commit
+    // Don't render if disconnected or if robot doesn't support speed control
+    if (!isConnected || !speedControlSupported) {
+        return null;
+    }
+
+    // Sync local value with store when not changing and after a grace period from last commit
     useEffect(() => {
-        if (!isDragging && Date.now() - lastCommitTime.current > 1000) {
+        if (!isChanging && Date.now() - lastCommitTime.current > 1000) {
             setLocalValue(robotSpeed);
         }
-    }, [robotSpeed, isDragging]);
+    }, [robotSpeed, isChanging]);
 
     const handleSpeedChange = (vals: number[]) => {
         setLocalValue(vals[0]);
-        setIsDragging(true);
+        setIsChanging(true);
     };
 
     const handleSpeedCommit = async (vals: number[]) => {
-        setIsDragging(false);
+        setIsChanging(false);
         lastCommitTime.current = Date.now();
 
         if (!isConnected) return;

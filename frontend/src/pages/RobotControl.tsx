@@ -32,9 +32,9 @@ const RobotControl = () => {
     const checkStatus = async () => {
       try {
         const status = await api.getRobotStatus();
-        setConnectionStatus(status.connected, status.host, status.port);
+        setConnectionStatus(status.connected, status.host, status.port, status.speed_control_supported);
       } catch (error) {
-        console.error("Error checking status:", error);
+        console.error('Failed to get robot status:', error);
       }
     };
 

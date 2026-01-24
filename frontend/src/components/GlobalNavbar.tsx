@@ -19,7 +19,9 @@ export const GlobalNavbar = () => {
             try {
                 const result = await api.connectRobot(host || "192.168.15.130", port || 30002);
                 if (result.success) {
-                    setConnectionStatus(true, host, port);
+                    // Fetch full status to get capability flags (like speed control support)
+                    const status = await api.getRobotStatus();
+                    setConnectionStatus(status.connected, status.host, status.port, status.speed_control_supported);
                     toast.success("Connected to robot!");
                 }
             } catch (error) {
