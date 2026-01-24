@@ -77,33 +77,52 @@ export const EmergencyStop = () => {
     const offset = circumference - (holdProgress / 100) * circumference;
 
     return (
-        <div className="relative group/estop pointer-events-auto select-none mr-4 mb-2">
+        <div className="relative group/estop pointer-events-auto select-none">
             {/* Industrial Yellow Housing - Thinner border to show more yellow */}
             <div className="w-32 h-32 rounded-full bg-[#fbbf24] border-[3px] border-[#b45309] shadow-[0_15px_35px_-5px_rgba(0,0,0,0.6),inset_0_2px_8px_rgba(255,255,255,0.5)] flex items-center justify-center relative overflow-hidden">
 
-                {/* Housing labels - Moved for better visibility and reduced clutter */}
-                <div className="absolute top-1.5 text-[8px] font-black text-[#78350f] uppercase tracking-[0.2em] opacity-80 drop-shadow-sm">Emergency</div>
-                <div className="absolute bottom-1.5 text-[8px] font-black text-[#78350f] uppercase tracking-[0.2em] opacity-80 drop-shadow-sm">Stop</div>
+                {/* Housing labels - Both stacked at the bottom */}
+                <div className="absolute bottom-1.5 flex flex-col items-center leading-tight pointer-events-none z-0">
+                    <span className="text-[8px] font-black text-[#78350f] uppercase tracking-[0.2em] opacity-80">Emergency</span>
+                    <span className="text-[8px] font-black text-[#78350f] uppercase tracking-[0.2em] opacity-80">Stop</span>
+                </div>
 
-                {/* Progress Ring for Reset - Reversed direction (scale-x-[-1]) */}
+                {/* Progress Ring for Reset - Starting from top (12 o'clock) and traveling CCW */}
                 {isEStopActive && holdProgress > 0 && (
-                    <svg className="absolute inset-0 w-full h-full -rotate-90 scale-x-[-1] pointer-events-none z-10">
+                    <svg
+                        viewBox="0 0 128 128"
+                        className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible"
+                        style={{
+                            transform: 'rotate(-90deg) scaleY(-1)',
+                            transformOrigin: 'center'
+                        }}
+                    >
+                        {/* Background track (subtle helper) */}
+                        <circle
+                            cx="64"
+                            cy="64"
+                            r={radius}
+                            stroke="rgba(255,255,255,0.05)"
+                            strokeWidth="5"
+                            fill="transparent"
+                        />
+                        {/* Active Progress */}
                         <circle
                             cx="64"
                             cy="64"
                             r={radius}
                             stroke="white"
-                            strokeWidth="4"
+                            strokeWidth="5"
                             fill="transparent"
-                            strokeDasharray={circumference}
+                            strokeDasharray={`${circumference} ${circumference}`}
                             strokeDashoffset={offset}
                             strokeLinecap="round"
-                            className="transition-all duration-75 ease-linear opacity-60"
+                            className="transition-all duration-75 ease-linear opacity-90 drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]"
                         />
                     </svg>
                 )}
 
-                {/* The Red Mushroom Button - Resized to w-16 h-16 to show more background */}
+                {/* The Red Mushroom Button - Reverted to "Centered when Pressed" geometry */}
                 <button
                     onMouseDown={startHolding}
                     onMouseUp={stopHolding}
@@ -111,11 +130,11 @@ export const EmergencyStop = () => {
                     onTouchStart={startHolding}
                     onTouchEnd={stopHolding}
                     className={cn(
-                        "relative w-16 h-16 rounded-full transition-all duration-300 ring-4 ring-black/20 z-20",
+                        "relative w-16 h-16 rounded-full transition-all duration-300 ring-4 ring-black/10 z-20",
                         "flex flex-col items-center justify-center text-white",
                         isEStopActive
-                            ? "bg-gradient-to-b from-[#7f1d1d] to-[#450a0a] shadow-inner translate-y-2 ring-[#ef4444]/40"
-                            : "bg-gradient-to-b from-[#ef4444] to-[#991b1b] shadow-[0_10px_0_0_#7f1d1d,0_15px_30px_-5px_rgba(127,29,29,0.7)] active:translate-y-2 active:shadow-[0_4px_0_0_#7f1d1d] hover:brightness-110"
+                            ? "bg-gradient-to-b from-[#7f1d1d] to-[#450a0a] shadow-inner translate-y-0 ring-[#ef4444]/20"
+                            : "bg-gradient-to-b from-[#ef4444] to-[#991b1b] -translate-y-2.5 shadow-[0_10px_0_0_#7f1d1d,0_20px_25px_-10px_rgba(0,0,0,0.5)] active:translate-y-[-4px] active:shadow-[0_4px_0_0_#7f1d1d] hover:brightness-110"
                     )}
                 >
                     {/* Glossy Highlight Overlay */}

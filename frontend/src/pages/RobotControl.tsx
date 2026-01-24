@@ -115,7 +115,7 @@ const RobotControl = () => {
             </div>
 
             {/* Bottom Overlay: TCP Info & E-Stop */}
-            <div className="absolute bottom-10 left-10 right-10 flex items-end justify-between gap-4 pointer-events-none">
+            <div className="absolute bottom-8 left-8 right-8 flex items-end justify-between gap-4 pointer-events-none">
               <PositionDisplayCompact pose={actualTcpPose} />
               <EmergencyStop />
             </div>
