@@ -208,6 +208,27 @@ class ApiClient {
             '/api/robot/emergency-stop',
             {
                 method: 'POST',
+                body: JSON.stringify({})
+            }
+        );
+    }
+
+    async moveToTargetJoints(joints: number[], speed: number = 0.5, acceleration: number = 0.5) {
+        return this.request<{ success: boolean; command: string; timestamp: string }>(
+            '/api/robot/move-to-joints',
+            {
+                method: 'POST',
+                body: JSON.stringify({ joints, speed, acceleration }),
+            }
+        );
+    }
+
+    async moveToTargetTcp(pose: number[], speed: number = 100, acceleration: number = 100) {
+        return this.request<{ success: boolean; command: string; timestamp: string }>(
+            '/api/robot/move-to-tcp',
+            {
+                method: 'POST',
+                body: JSON.stringify({ pose, speed, acceleration }),
             }
         );
     }

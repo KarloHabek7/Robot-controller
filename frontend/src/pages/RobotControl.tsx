@@ -1,27 +1,39 @@
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import ConnectionStatus from "@/components/ConnectionStatus";
-import ControlPanel from "@/components/ControlPanel";
-import PositionDisplay from "@/components/PositionDisplay";
-import Robot3DViewer from "@/components/Robot3DViewer";
-import JointControlTable from "@/components/JointControlTable";
-import CommandPanel from "@/components/CommandPanel";
-import RobotConfiguration from "@/components/RobotConfiguration";
-import ProgramControl from "@/components/ProgramControl";
-import { Header } from "@/components/Header";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useEffect } from "react";
+import { toast } from 'sonner';
+import ConnectionStatus from '@/components/ConnectionStatus';
+import PositionDisplayCompact from '@/components/PositionDisplayCompact';
+import Robot3DViewer from '@/components/Robot3DViewer';
+import JointControlTable from '@/components/JointControlTable';
+import RobotConfiguration from '@/components/RobotConfiguration';
+import CommandPanel from '@/components/CommandPanel';
+import { ControlModeSwitcher } from '@/components/ControlModeSwitcher';
+import ControlPanel from '@/components/ControlPanel';
+import ProgramControl from '@/components/ProgramControl';
+import { useRobotStore } from '@/stores/robotStore';
 import { api } from "@/services/api";
-import { useRobotStore } from "@/stores/robotStore";
 
-export default function RobotControl() {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
-  const { isConnected, actualTcpPose, targetJoints, targetTcpPose, setConnectionStatus, syncActualState, updateTargetTcp, tcpVisualizationMode, setTCPVisualizationMode } = useRobotStore();
-  const [robotConfig, setRobotConfig] = useState({ host: "192.168.15.130", port: 30002 });
+const RobotControl = () => {
+  const {
+    actualTcpPose,
+    isConnected,
+    setConnectionStatus,
+    host,
+    port,
+    activeControlMode,
+    setActiveControlMode,
+    syncActualState
+  } = useRobotStore();
 
   useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const status = await api.getRobotStatus();
+        setConnectionStatus(status.connected, status.host, status.port);
+      } catch (error) {
+        console.error("Error checking status:", error);
+      }
+    };
+
     checkStatus();
     const interval = setInterval(checkStatus, 5000);
 
@@ -34,179 +46,126 @@ export default function RobotControl() {
       clearInterval(interval);
       api.unsubscribeFromRobotState();
     };
-  }, []);
+  }, [setConnectionStatus, syncActualState]);
 
-  const checkStatus = async () => {
-    try {
-      const status = await api.getRobotStatus();
-      setConnectionStatus(status.connected, status.host, status.port);
-      if (status.host) {
-        setRobotConfig({ host: status.host, port: status.port });
-      }
-    } catch (error) {
-      console.error("Error checking status:", error);
-    }
+  const handleConfigChange = (newHost: string, newPort: number) => {
+    setConnectionStatus(isConnected, newHost, newPort);
   };
 
   const handleToggleConnection = async () => {
-    if (isConnected) {
+    const newStatus = !isConnected;
+
+    if (newStatus) {
       try {
-        await api.disconnectRobot();
-        setConnectionStatus(false);
-        toast.success(t('robot.disconnected'));
+        const result = await api.connectRobot(host || "192.168.15.130", port || 30002);
+        if (result.success) {
+          setConnectionStatus(true, host, port);
+          toast.success("Connected to robot!");
+        }
       } catch (error) {
-        toast.error(t('errors.commandFailed'));
+        toast.error("Connection failed");
       }
     } else {
       try {
-        setLoading(true);
-        const result = await api.connectRobot(robotConfig.host, robotConfig.port);
-        if (result.success) {
-          setConnectionStatus(true, robotConfig.host, robotConfig.port);
-          toast.success(t('robot.connected'));
-        }
+        await api.disconnectRobot();
+        setConnectionStatus(false);
+        toast.info("Disconnected from robot");
       } catch (error) {
-        toast.error(t('errors.connectionFailed'));
-      } finally {
-        setLoading(false);
+        toast.error("Disconnection failed");
       }
     }
   };
-
-  const handleMove = async (direction: string, value?: number) => {
-    if (!isConnected) {
-      toast.error(t('errors.notConnected'));
-      return;
-    }
-
-    if (direction === 'stop') {
-      try {
-        await api.emergencyStop();
-        toast.success(t('robot.emergencyStop'));
-      } catch (error) {
-        toast.error(t('errors.commandFailed'));
-      }
-      return;
-    }
-
-    const axisMap: { [key: string]: 'x' | 'y' | 'z' } = {
-      'up': 'y',
-      'down': 'y',
-      'left': 'x',
-      'right': 'x',
-      'z-up': 'z',
-      'z-down': 'z',
-    };
-
-    const directionMap: { [key: string]: '+' | '-' } = {
-      'up': '+',
-      'down': '-',
-      'left': '-',
-      'right': '+',
-      'z-up': '+',
-      'z-down': '-',
-    };
-
-    const axis = axisMap[direction];
-    const dir = directionMap[direction];
-
-    if (axis && dir && value !== undefined) {
-      try {
-        // Update target position for visualization (ghost robot)
-        const newTarget = [...targetTcpPose];
-        const axisIndex = { 'x': 0, 'y': 1, 'z': 2 }[axis];
-        if (axisIndex !== undefined) {
-          newTarget[axisIndex] += (dir === '+' ? value : -value);
-          updateTargetTcp(newTarget);
-        }
-
-        await api.tcpTranslate(axis, value, dir);
-        toast.success(`${t('controls.translate')} ${axis.toUpperCase()} ${dir}${value}`);
-      } catch (error) {
-        toast.error(t('errors.commandFailed'));
-      }
-    }
-  };
-
-  if (loading && !isConnected) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-background industrial-grid selection:bg-primary/20">
-      <Header />
-      <main className="container mx-auto p-4 md:p-8 space-y-8">
-        {/* Top Section - 3D Viewer and Joint Controls */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
-          <div className="xl:col-span-7 h-[500px] md:h-[650px] rounded-[2rem] overflow-hidden border bg-card shadow-2xl relative group">
+    <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
+      {/* Header - Fixed Height */}
+      <div className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary font-bold">
+            UR
+          </div>
+          <div>
+            <h1 className="text-lg font-bold leading-none">UR5 Controller</h1>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Professional Interface</p>
+          </div>
+        </div>
+        <ConnectionStatus
+          isConnected={isConnected}
+          onToggleConnection={handleToggleConnection}
+        />
+      </div>
+
+      {/* Main Content - Split Pane Layout */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+
+        {/* Left Pane: 3D Viewer */}
+        <div className="w-full lg:w-[40%] h-[50vh] lg:h-full flex-shrink-0 bg-secondary/10 relative border-b lg:border-b-0 lg:border-r border-border">
+          <div className="robot-viewer-container w-full h-full">
             <Robot3DViewer />
-            {/* Overlay Gradient for depth */}
-            <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-background/20 to-transparent" />
-
-            {/* TCP Visualization Mode Control */}
-            <div className="absolute bottom-4 left-4 z-10 bg-background/60 backdrop-blur-md rounded-lg border border-border/50 shadow-xl p-1">
-              <ToggleGroup type="single" value={tcpVisualizationMode} onValueChange={(value) => value && setTCPVisualizationMode(value as any)}>
-                <ToggleGroupItem value="real" aria-label="Real TCP" className="h-7 px-3 text-xs font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  Real
-                </ToggleGroupItem>
-                <ToggleGroupItem value="linked" aria-label="Linked TCP" className="h-7 px-3 text-xs font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  Linked
-                </ToggleGroupItem>
-                <ToggleGroupItem value="both" aria-label="Both" className="h-7 px-3 text-xs font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  Both
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          </div>
-          <div className="xl:col-span-5 flex flex-col">
-            <JointControlTable />
           </div>
         </div>
 
-        {/* Bottom Section - Responsive Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-8">
-          {/* Left Column */}
-          <div className="xl:col-span-3 space-y-8 flex flex-col">
-            <RobotConfiguration
-              host={robotConfig.host}
-              port={robotConfig.port}
-              onChange={(host, port) => setRobotConfig({ host, port })}
+        {/* Right Pane: Controls */}
+        <div className="w-full lg:w-[60%] flex flex-col h-full bg-card/30">
+
+          {/* 1. Mode Switcher */}
+          <div className="p-2 border-b bg-card/50 backdrop-blur-sm z-10">
+            <ControlModeSwitcher
+              activeMode={activeControlMode}
+              onModeChange={setActiveControlMode}
             />
-            <div className="mt-auto">
-              <ConnectionStatus
-                isConnected={isConnected}
-                onToggleConnection={handleToggleConnection}
-              />
+          </div>
+
+          {/* 2. Active Control Panel */}
+          <div className="flex-1 overflow-y-auto control-panel-scroll p-4 md:p-6">
+            <div className="max-w-4xl mx-auto">
+              {activeControlMode === 'joint' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <JointControlTable />
+                </div>
+              )}
+              {activeControlMode === 'tcp' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <ControlPanel />
+                </div>
+              )}
+              {activeControlMode === 'connection' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="p-4 bg-muted/30 rounded-lg border">
+                    <h3 className="font-medium mb-2">Connection Status</h3>
+                    <ConnectionStatus
+                      isConnected={isConnected}
+                      onToggleConnection={handleToggleConnection}
+                    />
+                  </div>
+                  <RobotConfiguration
+                    host={host || "192.168.15.130"}
+                    port={port || 30002}
+                    onChange={handleConfigChange}
+                  />
+                </div>
+              )}
+              {activeControlMode === 'commands' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <CommandPanel />
+                </div>
+              )}
+              {activeControlMode === 'programs' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <ProgramControl />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Middle Column */}
-          <div className="xl:col-span-5 space-y-8">
-            <PositionDisplay pose={actualTcpPose} />
-            <ControlPanel
-              onMove={handleMove}
-              onGoToPosition={(x, y, z) => console.log('Go to:', x, y, z)}
-            />
-          </div>
-
-          {/* Right Column */}
-          <div className="xl:col-span-4 space-y-8">
-            <ProgramControl />
-            <CommandPanel />
+          {/* 3. Compact Position Display */}
+          <div className="p-2 border-t bg-card z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <PositionDisplayCompact pose={actualTcpPose} />
           </div>
         </div>
-      </main>
-
-      {/* Footer / Status Bar */}
-      <footer className="border-t bg-card/50 backdrop-blur p-4 text-center mt-12">
-        <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted-foreground/40">
-          UR5 Robot Control System • Advanced Agentic Interface
-        </p>
-      </footer>
+      </div>
     </div>
   );
-}
+};
+
+export default RobotControl;

@@ -11,6 +11,7 @@ from backend.database import get_session
 from sqlmodel import Session
 import json
 import math
+from fastapi.concurrency import run_in_threadpool
 
 router = APIRouter(prefix="/api/robot", tags=["Robot Control"])
 
@@ -85,6 +86,16 @@ class CommandResponse(BaseModel):
     command: str
     timestamp: str
 
+class MoveToJointsRequest(BaseModel):
+    joints: list[float]
+    speed: float = 0.5
+    acceleration: float = 0.5
+
+class MoveToTcpRequest(BaseModel):
+    pose: list[float]
+    speed: float = 100.0  # mm/s
+    acceleration: float = 100.0  # mm/s^2
+
 @router.post("/connect", response_model=ConnectResponse)
 async def connect_robot(
     request: ConnectRequest,
@@ -102,7 +113,7 @@ async def disconnect_robot(current_user: User = Depends(get_current_user)):
     return {"success": True, "message": "Disconnected from robot"}
 
 @router.get("/status")
-async def get_status(current_user: User = Depends(get_current_user)):
+async def get_status():
     return {
         "connected": robot_client.is_connected(),
         "host": robot_client.host,
@@ -160,7 +171,8 @@ def {func_name}():
 end
 """
 
-async def log_command(user_id: int, command: str, success: bool, session: Session):
+# Changed to sync function to be run in threadpool
+def log_command(user_id: int, command: str, success: bool, session: Session):
     log = ActivityLog(user_id=user_id, command=command, success=success)
     session.add(log)
     session.commit()
@@ -174,7 +186,7 @@ async def tcp_translate(
     script = generate_translation_script(request.axis, request.value, request.direction)
     success = await robot_client.send_command(script)
     
-    await log_command(current_user.id, f"TCP Translate {request.axis} {request.direction}{request.value}", success, session)
+    await run_in_threadpool(log_command, current_user.id, f"TCP Translate {request.axis} {request.direction}{request.value}", success, session)
     
     if success:
         return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
@@ -190,7 +202,7 @@ async def tcp_rotate(
     script = generate_rotation_script(request.axis, request.value, request.direction)
     success = await robot_client.send_command(script)
     
-    await log_command(current_user.id, f"TCP Rotate {request.axis} {request.direction}{request.value}", success, session)
+    await run_in_threadpool(log_command, current_user.id, f"TCP Rotate {request.axis} {request.direction}{request.value}", success, session)
     
     if success:
         return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
@@ -206,7 +218,7 @@ async def joint_move(
     script = generate_joint_move_script(request.joint, request.value, request.direction)
     success = await robot_client.send_command(script)
     
-    await log_command(current_user.id, f"Joint {request.joint} Move {request.direction}{request.value}", success, session)
+    await run_in_threadpool(log_command, current_user.id, f"Joint {request.joint} Move {request.direction}{request.value}", success, session)
     
     if success:
         return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
@@ -222,7 +234,7 @@ async def start_program(
     script = f"def {request.program_name}():\n  # Program code goes here\nend"
     success = await robot_client.send_command(script)
     
-    await log_command(current_user.id, f"Start Program {request.program_name}", success, session)
+    await run_in_threadpool(log_command, current_user.id, f"Start Program {request.program_name}", success, session)
     
     if success:
         return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
@@ -237,7 +249,7 @@ async def stop_program(
     script = "stop"
     success = await robot_client.send_command(script)
     
-    await log_command(current_user.id, "Stop Program", success, session)
+    await run_in_threadpool(log_command, current_user.id, "Stop Program", success, session)
     
     if success:
         return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
@@ -252,7 +264,55 @@ async def emergency_stop(
     script = "stopj(10)"
     success = await robot_client.send_command(script)
     
-    await log_command(current_user.id, "Emergency Stop", success, session)
+    await run_in_threadpool(log_command, current_user.id, "Emergency Stop", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")
+
+@router.post("/move-to-joints", response_model=CommandResponse)
+async def move_to_joints(
+    request: MoveToJointsRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    # Convert degrees to radians
+    joints_rad = [math.radians(j) for j in request.joints]
+    
+    # Generate movej command
+    # movej(q, a=1.4, v=1.05, t=0, r=0)
+    script = f"movej([{','.join(map(str, joints_rad))}], a={request.acceleration}, v={request.speed})"
+    
+    success = await robot_client.send_command(script)
+    await run_in_threadpool(log_command, current_user.id, f"Move to Joints: {request.joints}", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")
+
+@router.post("/move-to-tcp", response_model=CommandResponse)
+async def move_to_tcp(
+    request: MoveToTcpRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    # Convert mm to m, degrees to radians
+    x, y, z = request.pose[0]/1000.0, request.pose[1]/1000.0, request.pose[2]/1000.0
+    rx, ry, rz = [math.radians(r) for r in request.pose[3:]]
+    
+    # Convert speed from mm/s to m/s
+    speed_m = request.speed / 1000.0
+    # Convert accel from mm/s^2 to m/s^2 (approximate scaling, or use default)
+    accel_m = request.acceleration / 1000.0
+    
+    # Generate movel command
+    # movel(pose, a=1.2, v=0.25, t=0, r=0)
+    script = f"movel(p[{x},{y},{z},{rx},{ry},{rz}], a={accel_m}, v={speed_m})"
+    
+    success = await robot_client.send_command(script)
+    await run_in_threadpool(log_command, current_user.id, f"Move to TCP: {request.pose}", success, session)
     
     if success:
         return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())

@@ -5,7 +5,7 @@ from backend.database import get_session
 from backend.models import User
 from backend.auth import decode_access_token, oauth2_scheme
 
-async def get_current_user(
+def get_current_user(
     token: str = Depends(oauth2_scheme),
     session: Session = Depends(get_session)
 ) -> User:

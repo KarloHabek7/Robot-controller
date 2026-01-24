@@ -189,22 +189,38 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    * Commit target joints to backend
    * This will be implemented in Task 7 to call api.moveToTargetJoints()
    */
-  commitTargetJoints: () => {
+  commitTargetJoints: async () => {
     const state = get();
-    console.log('Committing target joints:', state.targetJoints);
-    // TODO: Task 7 - Call api.moveToTargetJoints(state.targetJoints)
-    // For now, just log the action
+    if (!state.isTargetDirty) return;
+
+    set({ isMoving: true, movementProgress: 0 });
+
+    try {
+      await import('@/services/api').then(m => m.api.moveToTargetJoints(state.targetJoints));
+      // User will see "Target reached" when WebSocket updates actual position to match target
+    } catch (error) {
+      console.error("Failed to commit joints", error);
+      set({ isMoving: false }); // Reset on error
+      // Ideally show toast here or let component handle it
+    }
   },
 
   /**
    * Commit target TCP pose to backend
    * This will be implemented in Task 7 to call api.moveToTargetTcp()
    */
-  commitTargetTcp: () => {
+  commitTargetTcp: async () => {
     const state = get();
-    console.log('Committing target TCP:', state.targetTcpPose);
-    // TODO: Task 7 - Call api.moveToTargetTcp(state.targetTcpPose)
-    // For now, just log the action
+    if (!state.isTargetDirty) return;
+
+    set({ isMoving: true, movementProgress: 0 });
+
+    try {
+      await import('@/services/api').then(m => m.api.moveToTargetTcp(state.targetTcpPose));
+    } catch (error) {
+      console.error("Failed to commit TCP", error);
+      set({ isMoving: false });
+    }
   },
 
   /**
@@ -226,12 +242,65 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    */
   syncActualState: (joints: number[], tcpPose: number[]) => {
     set((state) => {
-      const isDirty = !areJointsEqual(state.targetJoints, joints);
+      // 1. Ghost Sync on Connect/Idle: If strictly clean and not moving, follow the robot.
+      // This ensures that when we first connect, or if the robot moves externally while we are idle,
+      // the ghost robot snaps to the real robot.
+      if (!state.isTargetDirty && !state.isMoving) {
+        return {
+          actualJoints: joints,
+          actualTcpPose: tcpPose,
+          targetJoints: joints,
+          targetTcpPose: tcpPose,
+          isTargetDirty: false,
+          isMoving: false
+        };
+      }
+
+      // 2. Check for Move Completion
+      // We need to determine if we reached the target we were aiming for.
+      const jointsMatch = areJointsEqual(state.targetJoints, joints);
+      const tcpMatch = arePosesEqual(state.targetTcpPose, tcpPose);
+
+      if (state.isMoving) {
+        let moveComplete = false;
+        let syncJoints = false;
+        let syncTcp = false;
+
+        // Check completion based on active mode
+        if (state.activeControlMode === 'joint' && jointsMatch) {
+          moveComplete = true; // Joint move finished
+          syncTcp = true;      // Sync TCP target to new actual
+        } else if (state.activeControlMode === 'tcp' && tcpMatch) {
+          moveComplete = true; // TCP move finished
+          syncJoints = true;   // Sync Joint target to new actual
+        } else if (jointsMatch && tcpMatch) {
+          // Both matched implies we are done regardless of mode
+          moveComplete = true;
+        }
+
+        if (moveComplete) {
+          return {
+            actualJoints: joints,
+            actualTcpPose: tcpPose,
+            // Update the passive target to match reality
+            targetJoints: syncJoints ? joints : state.targetJoints,
+            targetTcpPose: syncTcp ? tcpPose : state.targetTcpPose,
+            isTargetDirty: false,
+            isMoving: false,   // Re-enable controls
+            movementProgress: 100
+          };
+        }
+      }
+
+      // 3. Normal Update (Editing or Moving in progress)
+      // Recalculate dirty flag properly. If either differs, we are dirty.
+      const isDirty = !jointsMatch || !tcpMatch;
 
       return {
         actualJoints: joints,
         actualTcpPose: tcpPose,
         isTargetDirty: isDirty,
+        // Preserve isMoving state
       };
     });
   },

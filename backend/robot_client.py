@@ -113,6 +113,14 @@ class RobotTCPClient:
                 # Consume the rest of the packet
                 data = header + await self.feedback_reader.readexactly(length - 4)
                 
+                packet_count += 1
+                
+                # Process only every 5th packet (125Hz / 5 = 25Hz)
+                # This drastically reduces CPU usage and frontend broadcast overhead
+                if packet_count % 5 != 0:
+                    await asyncio.sleep(0) # Yield for other tasks
+                    continue
+
                 if length >= 444 + 48:
                     # Unpack joint positions (actual_q) - 6 doubles starting at offset 252
                     q_actual = struct.unpack('!6d', data[252:252+48])
@@ -126,8 +134,8 @@ class RobotTCPClient:
                         "timestamp": datetime.now().isoformat()
                     }
                     
-                    packet_count += 1
-                    if packet_count % 125 == 0: # Log every ~1 second (125Hz)
+                    if packet_count % 125 == 0: # Log every ~1 second (125Hz / 5 * 25 is still valid logic but simpler to just mod 125)
+                         # Note: packet_count increments at 125Hz, so this is still once per second
                         print(f"[RobotClient] State updated. J1: {q_actual[0]:.2f}, TCPz: {tcp_actual[2]:.2f}")
                 
                 # Yield control to other tasks

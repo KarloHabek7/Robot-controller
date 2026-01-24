@@ -5,6 +5,7 @@ import platform
 import time
 import threading
 import webbrowser
+import signal
 
 # Configuration
 BACKEND_DIR = "backend"
@@ -91,31 +92,62 @@ def setup_ngrok():
         return None, None
 
 USE_NGROK = False
+processes = []
 
-def run_backend():
-    print(f"[Backend] Starting Uvicorn {'(HTTP for ngrok)' if USE_NGROK else 'with SSL'}...")
+def start_backend():
+    print(f"[Backend] Starting Uvicorn (HTTP)...")
     python_executable = get_venv_python()
     cmd = [
         python_executable, "-m", "uvicorn", "backend.main:app", 
         "--reload", 
         "--host", "127.0.0.1" if USE_NGROK else "0.0.0.0", 
         "--port", "8000",
-        "--log-level", "debug"
+        "--log-level", "info"
     ]
-    if not USE_NGROK:
-        cmd.extend(["--ssl-keyfile", "certs/key.pem", "--ssl-certfile", "certs/cert.pem"])
+    # Removed SSL for local dev to prevent mixed content/handshake timeouts
+    # if not USE_NGROK:
+    #     cmd.extend(["--ssl-keyfile", "certs/key.pem", "--ssl-certfile", "certs/cert.pem"])
     
-    subprocess.run(cmd, check=False)
+    # Use Popen to keep track of the process
+    p = subprocess.Popen(cmd)
+    processes.append(p)
+    return p
 
-def run_frontend():
-    print(f"[Frontend] Starting Vite {'(HTTP for ngrok)' if USE_NGROK else 'with HTTPS'}...")
+def start_frontend():
+    print(f"[Frontend] Starting Vite (HTTP)...")
     # Passing --host to vite via npm run dev -- --host
     cmd = ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    
+    env = os.environ.copy()
     if USE_NGROK:
         # Actually, if vite.config.ts has https, we tell Vite via an env var.
-        os.environ["VITE_NO_HTTPS"] = "true"
+        env["VITE_NO_HTTPS"] = "true"
 
-    subprocess.run(cmd, cwd=FRONTEND_DIR, shell=is_windows(), check=False)
+    # Use Popen to keep track of the process
+    p = subprocess.Popen(cmd, cwd=FRONTEND_DIR, shell=is_windows(), env=env)
+    processes.append(p)
+    return p
+
+def get_local_ips():
+    import socket
+    ips = []
+    try:
+        # Get hostname
+        hostname = socket.gethostname()
+        # Get all addresses info
+        addr_infos = socket.getaddrinfo(hostname, None)
+        for family, _, _, _, sockaddr in addr_infos:
+            if family == socket.AF_INET: # IPv4
+                ip = sockaddr[0]
+                if not ip.startswith("127."):
+                    ips.append(ip)
+    except:
+        pass
+    
+    # Fallback/Always include localhost
+    if not ips:
+        ips.append("localhost")
+    return ips
 
 def main():
     print("=== UR5 Controller Orchestrator ===")
@@ -132,31 +164,38 @@ def main():
 
     print("\n=== Starting Services ===\n")
 
-    # 2. Run Phase (Parallel)
-    backend_process = threading.Thread(target=run_backend)
-    frontend_process = threading.Thread(target=run_frontend)
-
-    backend_process.start()
-    frontend_process.start()
+    # 2. Run Phase (Non-blocking with Popen)
+    start_backend()
+    time.sleep(2) # Give backend a moment
+    start_frontend()
 
     # 3. Open Browser Phase
     backend_tunnel, frontend_tunnel = tunnels
-    target_url = "https://localhost:8080" # Default
     
+    local_ips = get_local_ips()
+    
+    print("\n" + "="*50)
+    print("   Application Available at:")
+    for ip in local_ips:
+        print(f"   - http://{ip}:8080")
+    
+    if backend_tunnel:
+         # Just showing frontend tunnel if available
+         pass
     if frontend_tunnel:
-        target_url = frontend_tunnel.public_url
-    else:
-        # Fallback to local IP
-        import socket
-        try:
-            hostname = socket.gethostname()
-            local_ip = socket.gethostbyname(hostname)
-            target_url = f"https://{local_ip}:8080"
-        except:
-            pass
+        print(f"   - {frontend_tunnel.public_url} (Remote w/ ngrok)")
+    print("="*50 + "\n")
 
-    print(f"\n[Ready] Application will be available at: {target_url}")
-    print("[Ready] Attempting to open browser automatically in 3 seconds...")
+    # Pick the first non-localhost IP if available, else localhost
+    target_ip = "localhost"
+    for ip in local_ips:
+        if ip != "localhost":
+            target_ip = ip
+            break
+            
+    target_url = f"http://{target_ip}:8080"
+
+    print(f"[Ready] Attempting to open browser at {target_url} in 3 seconds...")
     
     def open_browser():
         time.sleep(3)
@@ -166,13 +205,28 @@ def main():
     threading.Thread(target=open_browser, daemon=True).start()
 
     try:
-        # Keep main thread alive
+        # Keep main thread alive and monitor processes
         while True:
             time.sleep(1)
+            # Check if any process died unexpectedly
+            for p in processes:
+                if p.poll() is not None:
+                    print(f"[Monitor] A process exited with code {p.returncode}. Shutting down...")
+                    raise KeyboardInterrupt
     except KeyboardInterrupt:
         print("\n[Stop] Shutting down...")
-        # Threads are daemon=False by default, so they might persist. 
-        # In a real production script we'd manage subprocess handles better but this is sufficient for dev.
+        for p in processes:
+            # Polite terminate
+            p.terminate()
+        
+        # Give them a moment
+        time.sleep(1)
+        
+        for p in processes:
+            if p.poll() is None:
+                # Force kill
+                p.kill()
+        
         sys.exit(0)
 
 if __name__ == "__main__":

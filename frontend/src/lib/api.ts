@@ -49,28 +49,38 @@ class ApiClient {
         localStorage.removeItem("access_token");
     }
 
-    private async request(endpoint: string, options: RequestInit = {}) {
+    private async request<T>(
+        endpoint: string,
+        options: RequestInit = {}
+    ): Promise<T> {
+        const token = this.token; // Use locally cached token
         const headers: HeadersInit = {
             "Content-Type": "application/json",
             "ngrok-skip-browser-warning": "69420",
             ...options.headers,
         };
 
-        if (this.token) {
-            headers["Authorization"] = `Bearer ${this.token}`;
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
         }
 
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            ...options,
-            headers,
-        });
+        const label = `API Request ${endpoint}`;
+        console.time(label);
+        try {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers,
+            });
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ detail: "Unknown error" }));
-            throw new Error(error.detail || `HTTP ${response.status}`);
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: "Unknown error" }));
+                throw new Error(error.detail || `HTTP ${response.status}`);
+            }
+
+            return response.json();
+        } finally {
+            console.timeEnd(label);
         }
-
-        return response.json();
     }
 
     // Auth endpoints
