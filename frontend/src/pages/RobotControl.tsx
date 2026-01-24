@@ -43,7 +43,7 @@ const RobotControl = () => {
 
     // Subscribe to real-time state
     api.subscribeToRobotState((state) => {
-      syncActualState(state.joints, state.tcp_pose);
+      syncActualState(state.joints, state.tcp_pose, state.speed_slider);
     });
 
     return () => {

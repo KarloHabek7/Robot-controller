@@ -96,6 +96,9 @@ class MoveToTcpRequest(BaseModel):
     speed: float = 100.0  # mm/s
     acceleration: float = 100.0  # mm/s^2
 
+class SetSpeedRequest(BaseModel):
+    speed: float  # 0.0 to 1.0
+
 @router.post("/connect", response_model=ConnectResponse)
 async def connect_robot(
     request: ConnectRequest,
@@ -261,13 +264,44 @@ async def emergency_stop(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    # Send script stop
     script = "stopj(10)"
-    success = await robot_client.send_command(script)
+    script_success = await robot_client.send_command(script)
+    
+    # Also send Dashboard stop for UI visual feedback on controller
+    dash_success = await robot_client.send_dashboard_command("stop")
+    
+    success = script_success or dash_success
     
     await run_in_threadpool(log_command, current_user.id, "Emergency Stop", success, session)
     
     if success:
-        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+        return CommandResponse(success=True, command=f"{script} + Dashboard Stop", timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")
+
+@router.post("/speed", response_model=CommandResponse)
+async def set_speed(
+    request: SetSpeedRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    # s must be between 0 and 1
+    s = max(0.0, min(1.0, request.speed))
+    
+    # Use the smart setter that tries RTDE then Dashboard
+    success = await robot_client.set_robot_speed(s)
+    method = "Interface (RTDE/Dashboard)" if success else "Script Fallback"
+    
+    if not success:
+        # Final fallback to script if both industrial interfaces failed
+        script = f"set_speed_slider_fraction({s})"
+        success = await robot_client.send_command(script)
+    
+    await run_in_threadpool(log_command, current_user.id, f"Set Speed Slider ({method}) to {s*100}%", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=f"Speed set via {method}", timestamp=datetime.utcnow().isoformat())
     else:
         raise HTTPException(status_code=500, detail="Not connected to robot")
 

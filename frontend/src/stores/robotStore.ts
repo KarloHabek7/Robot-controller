@@ -96,7 +96,7 @@ interface RobotState {
 
   // Reset and sync
   resetTargetToActual: () => void;
-  syncActualState: (joints: number[], tcpPose: number[]) => void;
+  syncActualState: (joints: number[], tcpPose: number[], speed?: number) => void;
 
   // Movement state
   setMovementState: (isMoving: boolean, progress?: number) => void;
@@ -250,24 +250,25 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    * Does not affect target state
    * Updates isTargetDirty based on comparison with current target
    */
-  syncActualState: (joints: number[], tcpPose: number[]) => {
+  syncActualState: (joints: number[], tcpPose: number[], speed?: number) => {
     set((state) => {
+      // Convert speed from 0.0-1.0 (robot) to 0-100 (UI)
+      const robotSpeedValue = speed !== undefined ? Math.round(speed * 100) : state.robotSpeed;
+
       // 1. Ghost Sync on Connect/Idle: If strictly clean and not moving, follow the robot.
-      // This ensures that when we first connect, or if the robot moves externally while we are idle,
-      // the ghost robot snaps to the real robot.
       if (!state.isTargetDirty && !state.isMoving) {
         return {
           actualJoints: joints,
           actualTcpPose: tcpPose,
           targetJoints: joints,
           targetTcpPose: tcpPose,
+          robotSpeed: robotSpeedValue,
           isTargetDirty: false,
           isMoving: false
         };
       }
 
       // 2. Check for Move Completion
-      // We need to determine if we reached the target we were aiming for.
       const jointsMatch = areJointsEqual(state.targetJoints, joints);
       const tcpMatch = arePosesEqual(state.targetTcpPose, tcpPose);
 
@@ -276,15 +277,13 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         let syncJoints = false;
         let syncTcp = false;
 
-        // Check completion based on active mode
         if (state.activeControlMode === 'joint' && jointsMatch) {
-          moveComplete = true; // Joint move finished
-          syncTcp = true;      // Sync TCP target to new actual
+          moveComplete = true;
+          syncTcp = true;
         } else if (state.activeControlMode === 'tcp' && tcpMatch) {
-          moveComplete = true; // TCP move finished
-          syncJoints = true;   // Sync Joint target to new actual
+          moveComplete = true;
+          syncJoints = true;
         } else if (jointsMatch && tcpMatch) {
-          // Both matched implies we are done regardless of mode
           moveComplete = true;
         }
 
@@ -292,25 +291,24 @@ export const useRobotStore = create<RobotState>((set, get) => ({
           return {
             actualJoints: joints,
             actualTcpPose: tcpPose,
-            // Update the passive target to match reality
             targetJoints: syncJoints ? joints : state.targetJoints,
             targetTcpPose: syncTcp ? tcpPose : state.targetTcpPose,
+            robotSpeed: robotSpeedValue,
             isTargetDirty: false,
-            isMoving: false,   // Re-enable controls
+            isMoving: false,
             movementProgress: 100
           };
         }
       }
 
-      // 3. Normal Update (Editing or Moving in progress)
-      // Recalculate dirty flag properly. If either differs, we are dirty.
+      // 3. Normal Update
       const isDirty = !jointsMatch || !tcpMatch;
 
       return {
         actualJoints: joints,
         actualTcpPose: tcpPose,
+        robotSpeed: robotSpeedValue,
         isTargetDirty: isDirty,
-        // Preserve isMoving state
       };
     });
   },

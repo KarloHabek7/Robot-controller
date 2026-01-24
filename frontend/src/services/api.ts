@@ -232,6 +232,16 @@ class ApiClient {
             }
         );
     }
+
+    async setRobotSpeed(speed: number) {
+        return this.request<{ success: boolean; command: string; timestamp: string }>(
+            '/api/robot/speed',
+            {
+                method: 'POST',
+                body: JSON.stringify({ speed }),
+            }
+        );
+    }
 }
 
 export const api = new ApiClient(API_BASE_URL);

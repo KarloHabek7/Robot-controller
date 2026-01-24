@@ -12,8 +12,14 @@ export const EmergencyStop = () => {
     const holdTimerRef = useRef<number | null>(null);
     const startTimeRef = useRef<number>(0);
 
-    const handleActivate = useCallback(() => {
+    const handleActivate = useCallback(async () => {
         setEStopActive(true);
+        try {
+            await import('@/services/api').then(m => m.api.emergencyStop());
+        } catch (error) {
+            console.error("Failed to send emergency stop:", error);
+        }
+
         toast.error("EMERGENCY STOP ACTIVATED", {
             duration: null,
             id: 'e-stop-toast',
