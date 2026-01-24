@@ -23,6 +23,9 @@
         "connected": "Connected",
         "disconnected": "Disconnected",
         "connectionStatus": "Connection Status",
+        "onlineReady": "Robot is online and ready",
+        "notConnected": "Not connected",
+        "configTitle": "Configuration & Settings",
         "host": "Host/IP Address",
         "port": "Port",
         "connectToRobot": "Connect to Robot",
@@ -31,7 +34,14 @@
         "tcpControl": "TCP Control",
         "programControl": "Program Control",
         "position": "Position",
-        "orientation": "Orientation"
+        "orientation": "Orientation",
+        "increment": "Increment",
+        "reset": "Reset",
+        "apply": "Apply",
+        "moving": "Moving...",
+        "directControl": "Direct Control",
+        "online": "Robot is online",
+        "ready": "Robot is ready"
     },
     "controls": {
         "joint": "Joint {{number}}",
@@ -68,7 +78,9 @@
         "save": "Save",
         "delete": "Delete",
         "edit": "Edit",
-        "close": "Close"
+        "close": "Close",
+        "reset": "Reset",
+        "apply": "Apply"
     },
     "errors": {
         "connectionFailed": "Failed to connect to robot",
@@ -86,5 +98,10 @@
         "english": "English",
         "croatian": "Croatian",
         "toggle": "Toggle Language"
+    },
+    "settings": {
+        "title": "Application Settings",
+        "theme": "Theme",
+        "language": "Language"
     }
 }

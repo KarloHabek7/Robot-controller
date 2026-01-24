@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import * as THREE from 'three';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -17,29 +18,40 @@ export function areJointsEqual(a: number[], b: number[], tolerance: number = 0.1
 }
 
 /**
- * Compare two TCP poses with tolerance
- * Position tolerance: 0.5mm, Rotation tolerance: 0.1°
- * @param a First pose [x, y, z, rx, ry, rz]
- * @param b Second pose [x, y, z, rx, ry, rz]
- * @returns true if position and rotation are within tolerance
+ * Checks if two robot poses [x, y, z, rx, ry, rz] are equivalent.
+ * Handles axis-angle normalization issues using Quaternions.
+ * Position tolerance: 1mm, Rotation tolerance: 0.2°
  */
 export function arePosesEqual(a: number[], b: number[]): boolean {
   if (a.length !== 6 || b.length !== 6) return false;
 
-  const positionTolerance = 0.5; // mm
-  const rotationTolerance = 0.1; // degrees
+  const positionTolerance = 0.002;  // 2mm in meters
+  const rotationTolerance = 0.007; // ~0.4° in radians
 
-  // Check position (x, y, z)
+  // 1. Check position (x, y, z)
   for (let i = 0; i < 3; i++) {
     if (Math.abs(a[i] - b[i]) > positionTolerance) return false;
   }
 
-  // Check rotation (rx, ry, rz)
-  for (let i = 3; i < 6; i++) {
-    if (Math.abs(a[i] - b[i]) > rotationTolerance) return false;
-  }
+  // 2. Check rotation (rx, ry, rz)
+  // Convert rotation vectors to quaternions to handle equivalent representations
+  const qA = rotationVectorToQuaternion(a[3], a[4], a[5]);
+  const qB = rotationVectorToQuaternion(b[3], b[4], b[5]);
 
-  return true;
+  // Dot product gives the cosine of half the angle between rotations
+  const dot = Math.abs(qA.dot(qB));
+  const angleDiff = 2 * Math.acos(Math.min(dot, 1.0)); // Total angular difference in radians
+
+  return angleDiff < rotationTolerance;
+}
+
+function rotationVectorToQuaternion(rx: number, ry: number, rz: number): THREE.Quaternion {
+  const axis = new THREE.Vector3(rx, ry, rz);
+  const angle = axis.length();
+  if (angle < 0.000001) return new THREE.Quaternion(0, 0, 0, 1);
+
+  // Normalize axis and set rotation
+  return new THREE.Quaternion().setFromAxisAngle(axis.clone().normalize(), angle);
 }
 
 // ============================================================================
@@ -60,6 +72,7 @@ interface RobotState {
   // === ACTUAL ROBOT STATE (from WebSocket) ===
   actualJoints: number[];      // [6] array of actual joint angles in degrees
   actualTcpPose: number[];     // [6] array: [x, y, z, rx, ry, rz] in mm and degrees
+  actualTcpOffset: number[];   // [6] array: tool offset [x, y, z, rx, ry, rz]
 
   // === TARGET STATE (user-controlled) ===
   targetJoints: number[];      // [6] array of target joint angles
@@ -80,9 +93,11 @@ interface RobotState {
   port: number | null;
   robotModel: string;
   tcpVisualizationMode: 'real' | 'linked' | 'both';
+  coordinateMode: 'base' | 'tool';
   robotSpeed: number; // 0-100%
   speedControlSupported: boolean; // True if robot supports RTDE speed control
   isEStopActive: boolean;
+  directControlEnabled: boolean;
 
   // === ACTIONS ===
   setActiveControlMode: (mode: ControlMode) => void;
@@ -92,14 +107,6 @@ interface RobotState {
   updateTargetTcp: (pose: number[]) => void;
 
   // Commit actions (send to backend)
-  commitTargetJoints: () => void;
-  commitTargetTcp: () => void;
-
-  // Reset and sync
-  resetTargetToActual: () => void;
-  syncActualState: (joints: number[], tcpPose: number[], speed?: number) => void;
-
-  // Movement state
   setMovementState: (isMoving: boolean, progress?: number) => void;
 
   // Joint metadata
@@ -111,12 +118,25 @@ interface RobotState {
   // TCP visualization
   setTCPVisualizationMode: (mode: 'real' | 'linked' | 'both') => void;
 
+  // Coordinate Mode
+  setCoordinateMode: (mode: 'base' | 'tool') => void;
+
   // Speed control
   setRobotSpeed: (speed: number) => void;
   setSpeedControlSupported: (supported: boolean) => void;
 
   // E-Stop
   setEStopActive: (active: boolean) => void;
+
+  // Direct Control
+  setDirectControlEnabled: (enabled: boolean) => void;
+
+  // Sync state
+  syncActualState: (joints: number[], tcpPose: number[], tcpOffset?: number[], speed?: number) => void;
+
+  resetTargetToActual: () => void;
+  commitTargetJoints: () => void;
+  commitTargetTcp: () => void;
 }
 
 // ============================================================================
@@ -128,6 +148,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   // Actual state (UR5 home position)
   actualJoints: [0, -90, 0, -90, 0, 0],
   actualTcpPose: [0, 0, 0, 0, 0, 0],
+  actualTcpOffset: [0, 0, 0, 0, 0, 0],
 
   // Target state (initially same as actual)
   targetJoints: [0, -90, 0, -90, 0, 0],
@@ -155,9 +176,11 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   port: null,
   robotModel: 'UR5',
   tcpVisualizationMode: 'linked',
+  coordinateMode: 'base',
   robotSpeed: 50,
   speedControlSupported: true, // Assume true until we check
   isEStopActive: false,
+  directControlEnabled: false,
 
   // === ACTIONS ===
 
@@ -253,7 +276,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    * Does not affect target state
    * Updates isTargetDirty based on comparison with current target
    */
-  syncActualState: (joints: number[], tcpPose: number[], speed?: number) => {
+  syncActualState: (joints: number[], tcpPose: number[], tcpOffset: number[] = [0, 0, 0, 0, 0, 0], speed?: number) => {
     set((state) => {
       // Convert speed from 0.0-1.0 (robot) to 0-100 (UI)
       const robotSpeedValue = speed !== undefined ? Math.round(speed * 100) : state.robotSpeed;
@@ -263,6 +286,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         return {
           actualJoints: joints,
           actualTcpPose: tcpPose,
+          actualTcpOffset: tcpOffset,
           targetJoints: joints,
           targetTcpPose: tcpPose,
           robotSpeed: robotSpeedValue,
@@ -294,6 +318,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
           return {
             actualJoints: joints,
             actualTcpPose: tcpPose,
+            actualTcpOffset: tcpOffset,
             targetJoints: syncJoints ? joints : state.targetJoints,
             targetTcpPose: syncTcp ? tcpPose : state.targetTcpPose,
             robotSpeed: robotSpeedValue,
@@ -310,6 +335,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       return {
         actualJoints: joints,
         actualTcpPose: tcpPose,
+        actualTcpOffset: tcpOffset,
         robotSpeed: robotSpeedValue,
         isTargetDirty: isDirty,
       };
@@ -358,6 +384,13 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   },
 
   /**
+   * Set Coordinate mode
+   */
+  setCoordinateMode: (coordinateMode: 'base' | 'tool') => {
+    set({ coordinateMode });
+  },
+
+  /**
    * Set robot speed
    */
   setRobotSpeed: (robotSpeed: number) => {
@@ -376,5 +409,12 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    */
   setEStopActive: (isEStopActive: boolean) => {
     set({ isEStopActive });
+  },
+
+  /**
+   * Set Direct Control enabled state
+   */
+  setDirectControlEnabled: (directControlEnabled: boolean) => {
+    set({ directControlEnabled });
   },
 }));

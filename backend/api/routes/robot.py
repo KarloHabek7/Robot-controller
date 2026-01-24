@@ -99,8 +99,8 @@ class MoveToJointsRequest(BaseModel):
 
 class MoveToTcpRequest(BaseModel):
     pose: list[float]
-    speed: float = 100.0  # mm/s
-    acceleration: float = 100.0  # mm/s^2
+    speed: float = 0.1  # m/s
+    acceleration: float = 0.5  # m/s^2
 
 class SetSpeedRequest(BaseModel):
     speed: float  # 0.0 to 1.0
@@ -318,7 +318,7 @@ async def move_to_joints(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    # Convert degrees to radians
+    # Convert degrees to radians (frontend sends degrees)
     joints_rad = [math.radians(j) for j in request.joints]
     
     # Generate movej command
@@ -339,23 +339,35 @@ async def move_to_tcp(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    # Convert mm to m, degrees to radians
-    x, y, z = request.pose[0]/1000.0, request.pose[1]/1000.0, request.pose[2]/1000.0
-    rx, ry, rz = [math.radians(r) for r in request.pose[3:]]
-    
-    # Convert speed from mm/s to m/s
-    speed_m = request.speed / 1000.0
-    # Convert accel from mm/s^2 to m/s^2 (approximate scaling, or use default)
-    accel_m = request.acceleration / 1000.0
+    # Pose is already in meters and radians from frontend
+    x, y, z, rx, ry, rz = request.pose
     
     # Generate movel command
     # movel(pose, a=1.2, v=0.25, t=0, r=0)
-    script = f"movel(p[{x},{y},{z},{rx},{ry},{rz}], a={accel_m}, v={speed_m})"
+    script = f"movel(p[{x},{y},{z},{rx},{ry},{rz}], a={request.acceleration}, v={request.speed})"
     
     success = await robot_client.send_command(script)
     await run_in_threadpool(log_command, current_user.id, f"Move to TCP: {request.pose}", success, session)
     
     if success:
         return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot")
+
+class RawCommandRequest(BaseModel):
+    command: str
+
+@router.post("/command/raw", response_model=CommandResponse)
+async def send_raw_command(
+    request: RawCommandRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    success = await robot_client.send_command(request.command)
+    
+    await run_in_threadpool(log_command, current_user.id, f"Raw: {request.command[:50]}", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command=request.command, timestamp=datetime.utcnow().isoformat())
     else:
         raise HTTPException(status_code=500, detail="Not connected to robot")

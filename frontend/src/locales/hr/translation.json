@@ -23,6 +23,9 @@
         "connected": "Povezano",
         "disconnected": "Odspoјeno",
         "connectionStatus": "Status Veze",
+        "onlineReady": "Robot je na mreži i spreman",
+        "notConnected": "Nije povezano",
+        "configTitle": "Konfiguracija i Postavke",
         "host": "Host/IP Adresa",
         "port": "Port",
         "connectToRobot": "Poveži se na robot",
@@ -31,7 +34,16 @@
         "tcpControl": "TCP Upravljanje",
         "programControl": "Upravljanje Programom",
         "position": "Pozicija",
-        "orientation": "Orijentacija"
+        "orientation": "Orijentacija",
+        "increment": "Pomak",
+        "reset": "Resetiraj",
+        "apply": "Primijeni",
+        "moving": "Pomiče se...",
+        "directControl": "Izravno Upravljanje",
+        "online": "Robot je na mreži",
+        "ready": "Robot je spreman",
+        "base": "Baza",
+        "tool": "Alat"
     },
     "controls": {
         "joint": "Zglob {{number}}",
@@ -68,7 +80,9 @@
         "save": "Spremi",
         "delete": "Obriši",
         "edit": "Uredi",
-        "close": "Zatvori"
+        "close": "Zatvori",
+        "reset": "Resetiraj",
+        "apply": "Primijeni"
     },
     "errors": {
         "connectionFailed": "Neuspješno povezivanje na robot",
@@ -86,5 +100,10 @@
         "english": "Engleski",
         "croatian": "Hrvatski",
         "toggle": "Promijeni Jezik"
+    },
+    "settings": {
+        "title": "Postavke Aplikacije",
+        "theme": "Tema",
+        "language": "Jezik"
     }
 }

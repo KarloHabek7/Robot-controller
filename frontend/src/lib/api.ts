@@ -176,6 +176,13 @@ class ApiClient {
             method: "POST",
         });
     }
+
+    async sendRawCommand(command: string) {
+        return this.request("/api/robot/command/raw", {
+            method: "POST",
+            body: JSON.stringify({ command }),
+        });
+    }
 }
 
 export const api = new ApiClient();

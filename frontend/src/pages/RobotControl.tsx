@@ -11,10 +11,11 @@ import ConnectionStatus from '@/components/ConnectionStatus';
 import { useRobotStore } from '@/stores/robotStore';
 import { api } from "@/services/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Box, Settings2 } from "lucide-react";
+import { Box, Settings2, Target } from "lucide-react";
 import { ControlModeSwitcher } from "@/components/ControlModeSwitcher";
 import EmergencyStop from "@/components/EmergencyStop";
 import SpeedControl from "@/components/SpeedControl";
+import { cn } from "@/lib/utils";
 
 const RobotControl = () => {
   const {
@@ -25,7 +26,9 @@ const RobotControl = () => {
     port,
     activeControlMode,
     setActiveControlMode,
-    syncActualState
+    syncActualState,
+    tcpVisualizationMode,
+    setTCPVisualizationMode
   } = useRobotStore();
 
   useEffect(() => {
@@ -43,7 +46,7 @@ const RobotControl = () => {
 
     // Subscribe to real-time state
     api.subscribeToRobotState((state) => {
-      syncActualState(state.joints, state.tcp_pose, state.speed_slider);
+      syncActualState(state.joints, state.tcp_pose, state.tcp_offset, state.speed_slider);
     });
 
     return () => {
@@ -116,8 +119,40 @@ const RobotControl = () => {
 
             {/* Bottom Overlay: TCP Info & E-Stop */}
             <div className="absolute bottom-8 left-8 right-8 flex items-end justify-between gap-4 pointer-events-none">
-              <PositionDisplayCompact pose={actualTcpPose} />
-              <EmergencyStop />
+              <div className="flex items-end gap-3 pointer-events-auto">
+                <PositionDisplayCompact pose={actualTcpPose} />
+
+                {/* TCP Preview Switcher - Vertical layout restored */}
+                <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-2xl p-2.5 shadow-2xl h-[80px] flex flex-col justify-between min-w-[190px]">
+                  <div className="flex items-center justify-center gap-2 mt-0.5">
+                    <Target className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.15em] text-primary">
+                      TCP Preview
+                    </span>
+                  </div>
+
+                  <div className="flex gap-1 bg-secondary/15 p-1 rounded-xl border border-border/10">
+                    {(['real', 'linked', 'both'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setTCPVisualizationMode(mode)}
+                        className={cn(
+                          "flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                          tcpVisualizationMode === mode
+                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                        )}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pointer-events-auto">
+                <EmergencyStop />
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -223,7 +223,7 @@ class ApiClient {
         );
     }
 
-    async moveToTargetTcp(pose: number[], speed: number = 100, acceleration: number = 100) {
+    async moveToTargetTcp(pose: number[], speed: number = 0.1, acceleration: number = 0.5) {
         return this.request<{ success: boolean; command: string; timestamp: string }>(
             '/api/robot/move-to-tcp',
             {
@@ -239,6 +239,16 @@ class ApiClient {
             {
                 method: 'POST',
                 body: JSON.stringify({ speed }),
+            }
+        );
+    }
+
+    async sendRawCommand(command: string) {
+        return this.request<{ success: boolean; command: string; timestamp: string }>(
+            '/api/robot/command/raw',
+            {
+                method: 'POST',
+                body: JSON.stringify({ command }),
             }
         );
     }

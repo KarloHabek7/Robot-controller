@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Minus, Plus, RotateCcw, Check, Loader2 } from 'lucide-react';
+import { Minus, Plus, RotateCcw, Check, Loader2, Zap } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 import { toast } from 'sonner';
 import { useRobotStore } from '@/stores/robotStore';
@@ -20,6 +22,8 @@ const JointControlTable = () => {
     updateTargetJoint,
     commitTargetJoints,
     resetTargetToActual,
+    directControlEnabled,
+    setDirectControlEnabled,
   } = useRobotStore();
 
   // Local state for global increment override
@@ -48,11 +52,22 @@ const JointControlTable = () => {
 
     const newAngle = Math.max(meta.min, Math.min(meta.max, currentTarget + delta));
     updateTargetJoint(jointId, parseFloat(newAngle.toFixed(2)));
+
+    if (directControlEnabled) {
+      // Small timeout to ensure store is updated before commit
+      setTimeout(() => commitTargetJoints(), 0);
+    }
   };
 
   // Slider handler
   const handleSliderChange = (jointId: number, value: number) => {
     updateTargetJoint(jointId, parseFloat(value.toFixed(2)));
+  };
+
+  const handleSliderCommit = () => {
+    if (directControlEnabled) {
+      commitTargetJoints();
+    }
   };
 
   // Input handler
@@ -65,6 +80,10 @@ const JointControlTable = () => {
 
     const clampedValue = Math.max(meta.min, Math.min(meta.max, numValue));
     updateTargetJoint(jointId, parseFloat(clampedValue.toFixed(2)));
+
+    if (directControlEnabled) {
+      setTimeout(() => commitTargetJoints(), 0);
+    }
   };
 
   // Apply handler
@@ -93,21 +112,38 @@ const JointControlTable = () => {
 
         <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-secondary/5 rounded-lg border border-border/40">
           {/* Global Increment Input */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
-              {t('robot.increment') || 'Step'}:
-            </span>
-            <div className="relative w-16">
-              <Input
-                type="number"
-                value={incrementOverride}
-                onChange={(e) => setIncrementOverride(e.target.value)}
-                className="h-7 pr-4 text-xs text-right bg-background shadow-sm"
-                min={0.1}
-                step={0.1}
-                disabled={isMoving || isEStopActive}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
+                {t('robot.increment')}:
+              </span>
+              <div className="relative w-16">
+                <Input
+                  type="number"
+                  value={incrementOverride}
+                  onChange={(e) => setIncrementOverride(e.target.value)}
+                  className="h-7 pr-4 text-xs text-right bg-background shadow-sm"
+                  min={0.1}
+                  step={0.1}
+                  disabled={isMoving || isEStopActive}
+                />
+                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">°</span>
+              </div>
+            </div>
+
+            <div className="h-4 w-px bg-border/40" />
+
+            <div className="flex items-center gap-2">
+              <Zap className={`w-3.5 h-3.5 ${directControlEnabled ? 'text-amber-500 fill-amber-500/20' : 'text-muted-foreground'}`} />
+              <Label htmlFor="direct-control" className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground cursor-pointer">
+                {t('robot.directControl')}
+              </Label>
+              <Switch
+                id="direct-control"
+                checked={directControlEnabled}
+                onCheckedChange={setDirectControlEnabled}
+                className="scale-75"
               />
-              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">°</span>
             </div>
           </div>
 
@@ -121,10 +157,10 @@ const JointControlTable = () => {
               className="gap-2 h-7 text-xs"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              {t('robot.reset') || 'Reset'}
+              {t('robot.reset')}
             </Button>
 
-            {isTargetDirty && (
+            {!directControlEnabled && isTargetDirty && (
               <Button
                 variant="default"
                 size="sm"
@@ -135,12 +171,12 @@ const JointControlTable = () => {
                 {isMoving ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    {t('robot.moving') || 'Moving...'}
+                    {t('robot.moving')}
                   </>
                 ) : (
                   <>
                     <Check className="w-3.5 h-3.5" />
-                    {t('robot.apply') || 'Apply'}
+                    {t('robot.apply')}
                   </>
                 )}
               </Button>
@@ -203,6 +239,7 @@ const JointControlTable = () => {
                 <Slider
                   value={[targetAngle]}
                   onValueChange={(values) => handleSliderChange(joint.id, values[0])}
+                  onValueCommit={handleSliderCommit}
                   min={joint.min}
                   max={joint.max}
                   step={0.1}

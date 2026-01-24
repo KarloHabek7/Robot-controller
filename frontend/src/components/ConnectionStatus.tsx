@@ -54,7 +54,7 @@ const ConnectionStatus = ({ isConnected, onToggleConnection, variant = 'default'
               {isConnected && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              {isConnected ? 'Robot is online and ready' : 'Not connected'}
+              {isConnected ? t('robot.onlineReady') : t('robot.notConnected')}
             </div>
           </div>
         </div>

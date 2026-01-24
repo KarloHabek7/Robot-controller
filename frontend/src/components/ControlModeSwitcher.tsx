@@ -10,9 +10,9 @@ interface ControlModeSwitcherProps {
 }
 
 const MODES: { value: ControlMode; label: string; icon: React.ElementType }[] = [
-    { value: 'connection', label: 'Connection', icon: Wifi },
-    { value: 'joint', label: 'Joint', icon: Sliders },
-    { value: 'tcp', label: 'TCP', icon: Move3d },
+    { value: 'connection', label: 'Connection\n& Settings', icon: Wifi },
+    { value: 'joint', label: 'Joint\nControl', icon: Sliders },
+    { value: 'tcp', label: 'TCP\nControl', icon: Move3d },
     { value: 'commands', label: 'Commands', icon: Terminal },
     { value: 'programs', label: 'Programs', icon: Play },
 ];
@@ -29,21 +29,21 @@ export const ControlModeSwitcher = ({ activeMode, onModeChange }: ControlModeSwi
                         <TabsTrigger
                             key={mode.value}
                             value={mode.value}
-                            className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 data-[state=active]:bg-secondary/20 data-[state=active]:text-primary data-[state=active]:shadow-none transition-all hover:bg-secondary/10 rounded-md"
+                            className="flex items-center justify-center gap-2 px-3 py-2 data-[state=active]:bg-secondary/20 data-[state=active]:text-primary data-[state=active]:shadow-none transition-all hover:bg-secondary/10 rounded-md h-12"
                         >
-                            <div className="relative">
-                                <Icon className="h-3.5 w-3.5" />
+                            <div className="relative shrink-0">
+                                <Icon className="h-4 w-4" />
 
                                 {/* Visual Indicators */}
                                 {mode.value === 'connection' && (
                                     <span className={cn(
-                                        "absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full border border-background",
+                                        "absolute -top-1 -right-1 h-2 w-2 rounded-full border border-background",
                                         isConnected ? "bg-green-500" : "bg-red-500"
                                     )} />
                                 )}
                             </div>
 
-                            <span className="text-[11px] font-bold uppercase tracking-tight hidden sm:inline-block">
+                            <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline-block leading-[1.1] text-left whitespace-pre-line">
                                 {mode.label}
                             </span>
                         </TabsTrigger>

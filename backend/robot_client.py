@@ -252,8 +252,8 @@ class RobotTCPClient:
                 print(f"[RobotClient] RTDE: Handshake failed. Robot errors: {error_msgs}")
                 return False
 
-            # 2. Setup Outputs (speed_scaling)
-            output_vars = "speed_scaling,target_speed_fraction"
+            # 2. Setup Outputs (speed_scaling, actual_TCP_offset)
+            output_vars = "speed_scaling,target_speed_fraction,actual_TCP_offset"
             print(f"[RobotClient] RTDE: Setting up outputs: {output_vars}")
             await self._send_rtde_package(self.RTDE_CONTROL_PACKAGE_SETUP_OUTPUTS, output_vars.encode())
             res_len, res_type, res_data = await self._read_rtde_package()
@@ -302,6 +302,9 @@ class RobotTCPClient:
         payload = await self.rtde_reader.readexactly(length - 3)
         return length, p_type, payload
 
+    # Added instance variable to store TCP offset from RTDE
+    rtde_tcp_offset = [0.0] * 6
+
     async def _rtde_listener(self):
         """Background task to read RTDE data packages."""
         print("[RobotClient] Starting RTDE listener")
@@ -311,10 +314,11 @@ class RobotTCPClient:
                 if p_type == self.RTDE_DATA_PACKAGE:
                     recipe_id = data[0]
                     if recipe_id == self.rtde_output_recipe_id:
-                        # Output recipe: 2 doubles (speed_scaling, target_speed_fraction)
-                        # Use the max of them to be safe (unaligned buffers sometimes have zeros)
-                        vals = struct.unpack(">dd", data[1:])
+                        # Output recipe: 2 doubles (speed) + 6 doubles (TCP offset) = 8 doubles
+                        # Unpack string: ">dddddddd"
+                        vals = struct.unpack(">dddddddd", data[1:])
                         self.rtde_speed_slider = max(vals[0], vals[1])
+                        self.rtde_tcp_offset = list(vals[2:8])
                 elif p_type == self.RTDE_TEXT_MESSAGE:
                     msg = data[1:].decode(errors='ignore')
                     print(f"[RTDE Msg] {msg}")
@@ -400,6 +404,7 @@ class RobotTCPClient:
                     self.latest_state = {
                         "joints": list(q_actual),
                         "tcp_pose": list(tcp_actual),
+                        "tcp_offset": self.rtde_tcp_offset,
                         "speed_slider": speed_slider,
                         "timestamp": datetime.now().isoformat()
                     }

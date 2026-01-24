@@ -66,41 +66,82 @@ const CoordinateFrame = ({
 
 const LinkedCoordinateFrame = ({
   endEffectorNode,
-  pose
+  pose,
+  targetPose,
+  isTarget = false,
+  referencePose,
+  referenceMatrix
 }: {
   endEffectorNode: THREE.Object3D,
-  pose: number[]
+  pose: number[],
+  targetPose?: number[],
+  isTarget?: boolean,
+  referencePose?: number[],
+  referenceMatrix?: THREE.Matrix4
 }) => {
   const groupRef = useRef<THREE.Group>(null);
+
   useFrame(() => {
     if (groupRef.current && endEffectorNode) {
-      // Calculate world position with offset (5cm offset in local Z)
-      const offset = new THREE.Vector3(0, 0, -5);
-      const worldPos = offset.applyMatrix4(endEffectorNode.matrixWorld);
-      groupRef.current.position.copy(worldPos);
-      // Rotation from Pose
-      const rx = pose[3];
-      const ry = pose[4];
-      const rz = pose[5];
-      const [ax, ay, az] = mapURToThree(rx, ry, rz);
-      const axis = new THREE.Vector3(ax, ay, az);
-      const angle = axis.length();
-      if (angle > 0.00001) {
-        axis.normalize();
-        groupRef.current.quaternion.setFromAxisAngle(axis, angle);
+      if (isTarget && targetPose && referencePose && referenceMatrix) {
+        // --- STABLE TARGET CALCULATION ---
+        // Use the snapshot from the START of the movement/edit
+        const offset = new THREE.Vector3(0, 0, -5);
+        const worldPos = offset.clone().applyMatrix4(referenceMatrix);
+
+        // Apply Delta: (Target UR Pose) - (Reference UR Pose)
+        const dx_ur = targetPose[0] - referencePose[0];
+        const dy_ur = targetPose[1] - referencePose[1];
+        const dz_ur = targetPose[2] - referencePose[2];
+        const [dx, dy, dz] = mapURToThree(dx_ur, dy_ur, dz_ur);
+
+        worldPos.x += dx;
+        worldPos.y += dy;
+        worldPos.z += dz;
+
+        groupRef.current.position.copy(worldPos);
+
+        // Rotation from targetPose
+        const [ax, ay, az] = mapURToThree(targetPose[3], targetPose[4], targetPose[5]);
+        const axis = new THREE.Vector3(ax, ay, az);
+        const angle = axis.length();
+        if (angle > 0.00001) {
+          axis.normalize();
+          groupRef.current.quaternion.setFromAxisAngle(axis, angle);
+        } else {
+          groupRef.current.quaternion.set(0, 0, 0, 1);
+        }
       } else {
-        groupRef.current.quaternion.set(0, 0, 0, 1);
+        // --- ACTUAL LINKED TRACKING ---
+        const offset = new THREE.Vector3(0, 0, -5);
+        const worldPos = offset.clone().applyMatrix4(endEffectorNode.matrixWorld);
+        groupRef.current.position.copy(worldPos);
+
+        // Rotation from current Pose
+        const [ax, ay, az] = mapURToThree(pose[3], pose[4], pose[5]);
+        const axis = new THREE.Vector3(ax, ay, az);
+        const angle = axis.length();
+        if (angle > 0.00001) {
+          axis.normalize();
+          groupRef.current.quaternion.setFromAxisAngle(axis, angle);
+        } else {
+          groupRef.current.quaternion.set(0, 0, 0, 1);
+        }
       }
     }
   });
+
   return (
     <group ref={groupRef}>
+      {/* X Axis - Red */}
       <arrowHelper args={[new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), 0.2, 0xff0000, 0.05, 0.03]} />
+      {/* Y Axis - Green */}
       <arrowHelper args={[new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 0.2, 0x00ff00, 0.05, 0.03]} />
+      {/* Z Axis - Blue */}
       <arrowHelper args={[new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 0.2, 0x0000ff, 0.05, 0.03]} />
       <mesh>
         <sphereGeometry args={[0.005]} />
-        <meshBasicMaterial color="white" />
+        <meshBasicMaterial color="white" transparent={isTarget} opacity={isTarget ? 0.5 : 1} />
       </mesh>
     </group>
   );
@@ -251,12 +292,33 @@ const RobotScene = () => {
     isConnected,
     isTargetDirty,
     isMoving,
-    targetTcpPose
+    targetTcpPose,
+    actualTcpPose,
+    tcpVisualizationMode
   } = useRobotStore();
 
   const currentJointAngles = useRef<number[]>(actualJoints);
   const [displayJoints, setDisplayJoints] = useState<number[]>(actualJoints);
   const [endEffectorNode, setEndEffectorNode] = useState<THREE.Object3D | null>(null);
+
+  // Snapshot state to "freeze" the target preview origin
+  const [referencePose, setReferencePose] = useState<number[] | null>(null);
+  const [referenceMatrix, setReferenceMatrix] = useState<THREE.Matrix4 | null>(null);
+
+  useEffect(() => {
+    if (isTargetDirty) {
+      if (!referencePose && endEffectorNode) {
+        // Capture initial state when edit starts
+        setReferencePose([...actualTcpPose]);
+        setReferenceMatrix(endEffectorNode.matrixWorld.clone());
+      }
+    } else {
+      // Clear snapshot when target is synchronized or reset
+      setReferencePose(null);
+      setReferenceMatrix(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTargetDirty, endEffectorNode]);
 
   // Animation state for ghost robot
   const ghostRef = useRef<THREE.Group>(null);
@@ -266,8 +328,7 @@ const RobotScene = () => {
   // Detect when robot reaches target
   useEffect(() => {
     if (prevMoving.current && !isMoving && !isTargetDirty) {
-      // Robot just finished moving and reached target
-      setReachAnimation(1.0); // Start 1 second animation
+      setReachAnimation(1.0);
       toast.success('Target position reached!');
     }
     prevMoving.current = isMoving;
@@ -293,23 +354,18 @@ const RobotScene = () => {
 
     // 2. Handle Reach Animation (Pulse effect)
     if (reachAnimation > 0 && ghostRef.current) {
-      // Pulse effect: scale briefly up and down
-      // Sine wave from 0 to PI (one hump)
-      const progress = 1.0 - reachAnimation; // 0 to 1
+      const progress = 1.0 - reachAnimation;
       const scale = 1 + Math.sin(progress * Math.PI * 2) * 0.05;
       ghostRef.current.scale.setScalar(scale);
-      setReachAnimation(prev => Math.max(0, prev - delta * 2)); // Speed up animation 2x
+      setReachAnimation(prev => Math.max(0, prev - delta * 2));
     } else if (ghostRef.current && reachAnimation === 0) {
       ghostRef.current.scale.setScalar(1);
     }
   });
 
-  // Calculate ghost opacity based on animation
+  // Calculate ghost opacity
   const getGhostOpacity = () => {
-    if (reachAnimation > 0) {
-      // Fade out during animation
-      return 0.4 * (reachAnimation);
-    }
+    if (reachAnimation > 0) return 0.4 * (reachAnimation);
     return isMoving ? 0.5 : 0.4;
   };
 
@@ -344,11 +400,22 @@ const RobotScene = () => {
 
         {/* Target TCP Frame - Only when dirty */}
         {isConnected && isTargetDirty && (
-          <CoordinateFrame
-            pose={targetTcpPose}
-            label="Target TCP"
-            opacity={0.5}
-          />
+          (tcpVisualizationMode === 'linked' || tcpVisualizationMode === 'both') && endEffectorNode ? (
+            <LinkedCoordinateFrame
+              endEffectorNode={endEffectorNode}
+              pose={actualTcpPose}
+              targetPose={targetTcpPose}
+              isTarget={true}
+              referencePose={referencePose || actualTcpPose}
+              referenceMatrix={referenceMatrix || endEffectorNode.matrixWorld}
+            />
+          ) : (
+            <CoordinateFrame
+              pose={targetTcpPose}
+              label="Target TCP"
+              opacity={0.5}
+            />
+          )
         )}
 
         <TCPCoordinateSystem endEffectorNode={endEffectorNode} />
@@ -358,8 +425,9 @@ const RobotScene = () => {
   );
 };
 
+
 const Robot3DViewer = () => {
-  const { isConnected } = useRobotStore();
+  const { isConnected, tcpVisualizationMode, setTCPVisualizationMode } = useRobotStore();
 
   return (
     // Changed: Removed min-h-[400px], added h-full w-full to fill parent
@@ -413,5 +481,8 @@ const Robot3DViewer = () => {
     </div>
   );
 };
+
+// Add cn import if missing (it's in ControlPanel but check here)
+import { cn } from '@/lib/utils';
 
 export default Robot3DViewer;
