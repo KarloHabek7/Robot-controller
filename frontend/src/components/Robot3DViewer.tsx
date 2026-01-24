@@ -402,14 +402,6 @@ const Robot3DViewer = () => {
       <div className="absolute top-4 left-4 border-l-2 border-t-2 border-primary/30 w-8 h-8 pointer-events-none" />
       <div className="absolute bottom-4 right-4 border-r-2 border-b-2 border-primary/30 w-8 h-8 pointer-events-none" />
 
-      {/* Viewer Label */}
-      <div className="absolute top-4 right-4 bg-background/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-border/50 shadow-xl pointer-events-none flex items-center gap-2">
-        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">
-          {isConnected ? 'Live 3D View' : 'Disconnected'}
-        </span>
-      </div>
-
       {/* Center Disconnected Message */}
       {!isConnected && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

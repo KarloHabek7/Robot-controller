@@ -16,6 +16,7 @@ const JointControlTable = () => {
     jointMetadata,
     isTargetDirty,
     isMoving,
+    isEStopActive,
     updateTargetJoint,
     commitTargetJoints,
     resetTargetToActual,
@@ -104,7 +105,7 @@ const JointControlTable = () => {
                 className="h-7 pr-4 text-xs text-right bg-background shadow-sm"
                 min={0.1}
                 step={0.1}
-                disabled={isMoving}
+                disabled={isMoving || isEStopActive}
               />
               <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">°</span>
             </div>
@@ -116,7 +117,7 @@ const JointControlTable = () => {
               variant="outline"
               size="sm"
               onClick={handleReset}
-              disabled={isMoving}
+              disabled={isMoving || isEStopActive}
               className="gap-2 h-7 text-xs"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -128,7 +129,7 @@ const JointControlTable = () => {
                 variant="default"
                 size="sm"
                 onClick={handleApply}
-                disabled={isMoving}
+                disabled={isMoving || isEStopActive}
                 className="gap-2 h-7 text-xs bg-primary hover:bg-primary/90"
               >
                 {isMoving ? (
@@ -163,7 +164,7 @@ const JointControlTable = () => {
               className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isDirty
                 ? 'bg-primary/5 border-primary/50 shadow-sm'
                 : 'bg-secondary/10 border-border/50'
-                } ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}
+                } ${(isMoving || isEStopActive) ? 'opacity-50 pointer-events-none' : ''}`}
             >
               {/* Joint Name - Reduced width to w-16 */}
               <div className="w-16 shrink-0">

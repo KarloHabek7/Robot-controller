@@ -29,6 +29,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
     targetTcpPose,
     isTargetDirty,
     isMoving,
+    isEStopActive,
     updateTargetTcp,
     commitTargetTcp,
     resetTargetToActual
@@ -103,7 +104,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             type="number"
             value={target} // Controlled by target state
             onChange={(e) => handleInputChange(index, e.target.value)}
-            disabled={isMoving}
+            disabled={isMoving || isEStopActive}
             className={cn(
               "h-8 font-mono text-right pr-8 transition-colors",
               isDirty ? "border-amber-500/50 bg-amber-500/5 text-amber-600 dark:text-amber-400" : "text-foreground"
@@ -145,7 +146,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             variant="ghost"
             size="sm"
             onClick={handleReset}
-            disabled={isMoving}
+            disabled={isMoving || isEStopActive}
             className="text-muted-foreground hover:text-foreground"
           >
             <ResetIcon className="w-4 h-4 mr-2" />
@@ -156,7 +157,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             <Button
               size="sm"
               onClick={handleApply}
-              disabled={isMoving}
+              disabled={isMoving || isEStopActive}
               className="bg-amber-500 hover:bg-amber-600 text-white animate-in fade-in zoom-in duration-200"
             >
               <Check className="w-4 h-4 mr-2" />
@@ -169,7 +170,10 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
         {/* --- POSITION CARD --- */}
-        <div className="relative group bg-card border rounded-3xl p-6 overflow-hidden transition-all duration-300 hover:shadow-2xl">
+        <div className={cn(
+          "relative group bg-card border rounded-3xl p-6 overflow-hidden transition-all duration-300 hover:shadow-2xl",
+          isEStopActive && "opacity-60 grayscale-[0.5] pointer-events-none"
+        )}>
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-transparent opacity-50" />
 
           <h3 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">
@@ -273,7 +277,10 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
         </div>
 
         {/* --- ROTATION CARD --- */}
-        <div className="bg-card border rounded-3xl p-6 relative overflow-hidden transition-all duration-300 hover:shadow-2xl flex flex-col">
+        <div className={cn(
+          "bg-card border rounded-3xl p-6 relative overflow-hidden transition-all duration-300 hover:shadow-2xl flex flex-col",
+          isEStopActive && "opacity-60 grayscale-[0.5] pointer-events-none"
+        )}>
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-transparent opacity-50" />
 
           <h3 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">

@@ -10,9 +10,9 @@ interface ControlModeSwitcherProps {
 }
 
 const MODES: { value: ControlMode; label: string; icon: React.ElementType }[] = [
+    { value: 'connection', label: 'Connection', icon: Wifi },
     { value: 'joint', label: 'Joint', icon: Sliders },
     { value: 'tcp', label: 'TCP', icon: Move3d },
-    { value: 'connection', label: 'Connection', icon: Wifi },
     { value: 'commands', label: 'Commands', icon: Terminal },
     { value: 'programs', label: 'Programs', icon: Play },
 ];
@@ -21,29 +21,29 @@ export const ControlModeSwitcher = ({ activeMode, onModeChange }: ControlModeSwi
     const { isConnected } = useRobotStore();
 
     return (
-        <Tabs value={activeMode} onValueChange={(v) => onModeChange(v as ControlMode)} className="w-full">
-            <TabsList className="grid grid-cols-5 w-full h-auto p-1">
+        <Tabs value={activeMode} onValueChange={(v) => onModeChange(v as ControlMode)} className="w-auto">
+            <TabsList className="bg-transparent h-auto p-0 gap-0">
                 {MODES.map((mode) => {
                     const Icon = mode.icon;
                     return (
                         <TabsTrigger
                             key={mode.value}
                             value={mode.value}
-                            className="flex flex-col md:flex-row items-center justify-center gap-2 py-2 md:py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                            className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 data-[state=active]:bg-secondary/20 data-[state=active]:text-primary data-[state=active]:shadow-none transition-all hover:bg-secondary/10 rounded-md"
                         >
                             <div className="relative">
-                                <Icon className="h-4 w-4 md:h-4 md:w-4" />
+                                <Icon className="h-3.5 w-3.5" />
 
                                 {/* Visual Indicators */}
                                 {mode.value === 'connection' && (
                                     <span className={cn(
-                                        "absolute -top-1 -right-1 h-2 w-2 rounded-full border border-background",
+                                        "absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full border border-background",
                                         isConnected ? "bg-green-500" : "bg-red-500"
                                     )} />
                                 )}
                             </div>
 
-                            <span className="text-[10px] md:text-sm font-medium hidden sm:inline-block">
+                            <span className="text-[11px] font-bold uppercase tracking-tight hidden sm:inline-block">
                                 {mode.label}
                             </span>
                         </TabsTrigger>

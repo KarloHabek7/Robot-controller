@@ -1,14 +1,41 @@
 import { Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from "react-i18next";
+import { cn } from '@/lib/utils';
 
 interface ConnectionStatusProps {
   isConnected: boolean;
   onToggleConnection: () => void;
+  variant?: 'default' | 'compact';
 }
 
-const ConnectionStatus = ({ isConnected, onToggleConnection }: ConnectionStatusProps) => {
+const ConnectionStatus = ({ isConnected, onToggleConnection, variant = 'default' }: ConnectionStatusProps) => {
   const { t } = useTranslation();
+
+  if (variant === 'compact') {
+    return (
+      <div className="flex items-center gap-3 bg-background/50 border rounded-lg px-3 py-1.5 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            "w-2 h-2 rounded-full",
+            isConnected ? "bg-primary animate-pulse" : "bg-muted-foreground/30"
+          )} />
+          <span className="text-xs font-medium hidden sm:inline-block">
+            {isConnected ? t('robot.connected') : t('robot.disconnected')}
+          </span>
+        </div>
+
+        <Button
+          onClick={onToggleConnection}
+          variant={isConnected ? "destructive" : "default"}
+          size="sm"
+          className="h-7 px-3 text-xs"
+        >
+          {isConnected ? t('robot.disconnect') : t('robot.connect')}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card border rounded-xl p-5 shadow-sm">

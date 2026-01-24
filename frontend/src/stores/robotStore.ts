@@ -80,6 +80,8 @@ interface RobotState {
   port: number | null;
   robotModel: string;
   tcpVisualizationMode: 'real' | 'linked' | 'both';
+  robotSpeed: number; // 0-100%
+  isEStopActive: boolean;
 
   // === ACTIONS ===
   setActiveControlMode: (mode: ControlMode) => void;
@@ -107,6 +109,12 @@ interface RobotState {
 
   // TCP visualization
   setTCPVisualizationMode: (mode: 'real' | 'linked' | 'both') => void;
+
+  // Speed control
+  setRobotSpeed: (speed: number) => void;
+
+  // E-Stop
+  setEStopActive: (active: boolean) => void;
 }
 
 // ============================================================================
@@ -145,6 +153,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   port: null,
   robotModel: 'UR5',
   tcpVisualizationMode: 'linked',
+  robotSpeed: 50,
+  isEStopActive: false,
 
   // === ACTIONS ===
 
@@ -191,7 +201,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    */
   commitTargetJoints: async () => {
     const state = get();
-    if (!state.isTargetDirty) return;
+    if (!state.isTargetDirty || state.isEStopActive) return;
 
     set({ isMoving: true, movementProgress: 0 });
 
@@ -211,7 +221,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    */
   commitTargetTcp: async () => {
     const state = get();
-    if (!state.isTargetDirty) return;
+    if (!state.isTargetDirty || state.isEStopActive) return;
 
     set({ isMoving: true, movementProgress: 0 });
 
@@ -343,5 +353,19 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    */
   setTCPVisualizationMode: (tcpVisualizationMode: 'real' | 'linked' | 'both') => {
     set({ tcpVisualizationMode });
+  },
+
+  /**
+   * Set robot speed
+   */
+  setRobotSpeed: (robotSpeed: number) => {
+    set({ robotSpeed });
+  },
+
+  /**
+   * Set E-Stop active state
+   */
+  setEStopActive: (isEStopActive: boolean) => {
+    set({ isEStopActive });
   },
 }));
