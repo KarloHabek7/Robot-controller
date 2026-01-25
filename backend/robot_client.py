@@ -33,6 +33,10 @@ class RobotTCPClient:
         self.latest_state: Optional[dict] = None
         self.feedback_task: Optional[asyncio.Task] = None
         self.rtde_task: Optional[asyncio.Task] = None
+        self.status_poller_task: Optional[asyncio.Task] = None
+
+        self.robot_mode: int = -1
+        self.safety_mode: int = -1
 
         self.ftp_user = "root"
         self.ftp_password = "easybot"
@@ -108,6 +112,10 @@ class RobotTCPClient:
                 self.feedback_task = asyncio.create_task(self._feedback_listener())
             if self.rtde_connected:
                 self.rtde_task = asyncio.create_task(self._rtde_listener())
+            
+            # Start status poller (as fallback for RTDE or for richer info)
+            if self.dashboard_connected or self.feedback_connected:
+                self.status_poller_task = asyncio.create_task(self._status_poller())
 
             print(f"[RobotClient] Fully connected to {host}")
             return True
@@ -138,6 +146,14 @@ class RobotTCPClient:
             except asyncio.CancelledError:
                 pass
             self.rtde_task = None
+
+        if self.status_poller_task:
+            self.status_poller_task.cancel()
+            try:
+                await self.status_poller_task
+            except asyncio.CancelledError:
+                pass
+            self.status_poller_task = None
 
         if self.writer:
             self.writer.close()
@@ -266,8 +282,8 @@ class RobotTCPClient:
                 print(f"[RobotClient] RTDE: Handshake failed. Robot errors: {error_msgs}")
                 return False
 
-            # 2. Setup Outputs (speed_scaling, actual_TCP_offset)
-            output_vars = "speed_scaling,target_speed_fraction,actual_TCP_offset"
+            # 2. Setup Outputs (speed_scaling, target_speed_fraction, actual_TCP_offset, robot_mode, safety_mode)
+            output_vars = "speed_scaling,target_speed_fraction,actual_TCP_offset,robot_mode,safety_mode"
             print(f"[RobotClient] RTDE: Setting up outputs: {output_vars}")
             await self._send_rtde_package(self.RTDE_CONTROL_PACKAGE_SETUP_OUTPUTS, output_vars.encode())
             res_len, res_type, res_data = await self._read_rtde_package()
@@ -334,11 +350,14 @@ class RobotTCPClient:
                 if p_type == self.RTDE_DATA_PACKAGE:
                     recipe_id = data[0]
                     if recipe_id == self.rtde_output_recipe_id:
-                        # Output recipe: 2 doubles (speed) + 6 doubles (TCP offset) = 8 doubles
-                        # Unpack string: ">dddddddd"
-                        vals = struct.unpack(">dddddddd", data[1:])
+                        # Output recipe: 2 doubles (speed) + 6 doubles (TCP offset) + 2 INT32 (modes)
+                        # doubles = 8 bytes each, INT32 = 4 bytes each
+                        # Unpack string: ">ddddddddii"
+                        vals = struct.unpack(">ddddddddii", data[1:])
                         self.rtde_speed_slider = max(vals[0], vals[1])
                         self.rtde_tcp_offset = list(vals[2:8])
+                        self.robot_mode = vals[8]
+                        self.safety_mode = vals[9]
                 elif p_type == self.RTDE_TEXT_MESSAGE:
                     msg = data[1:].decode(errors='ignore')
                     print(f"[RTDE Msg] {msg}")
@@ -378,8 +397,37 @@ class RobotTCPClient:
     async def read_state(self) -> Optional[dict]:
         """Return the latest parsed robot state."""
         if self.latest_state:
-            return self.latest_state.copy()
+            state = self.latest_state.copy()
+            state["robot_mode"] = self.robot_mode
+            state["safety_mode"] = self.safety_mode
+            return state
         return None
+
+    async def _status_poller(self):
+        """Fallback poller to get robot status via Dashboard if RTDE is not providing it."""
+        print("[RobotClient] Starting status poller task")
+        while self.connected:
+            try:
+                if not self.rtde_connected and self.dashboard_connected:
+                    # Poll dashboard for modes if RTDE is down
+                    mode_resp = await self.send_dashboard_command("robotmode")
+                    if mode_resp:
+                        # Format: "Robotmode: RUNNING" or similar
+                        if "RUNNING" in mode_resp: self.robot_mode = 7
+                        elif "POWER_OFF" in mode_resp: self.robot_mode = 3
+                        # ... other mappings if needed
+                    
+                    safety_resp = await self.send_dashboard_command("safetystatus")
+                    if safety_resp:
+                        if "PROTECTIVE_STOP" in safety_resp: self.safety_mode = 3
+                        elif "EMERGENCY_STOP" in safety_resp: self.safety_mode = 4
+                        elif "NORMAL" in safety_resp: self.safety_mode = 1
+
+                await asyncio.sleep(2.0) # Poll every 2 seconds (dashboard is slow)
+            except Exception as e:
+                print(f"[RobotClient] Status poller error: {e}")
+                await asyncio.sleep(5.0)
+        print("[RobotClient] Status poller stopped")
 
     # Constants for tracking the speed offset once found
     _speed_offset_cache = None

@@ -116,8 +116,8 @@ export default function Auth() {
       <Card className="w-full max-w-md shadow-xl border-2">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Rocket className="h-8 w-8 text-primary" />
+            <div className="p-2 bg-primary/10 rounded-2xl">
+              <img src="/logo.png" alt="Logo" className="h-16 w-16 object-contain" />
             </div>
           </div>
           <div className="space-y-1">

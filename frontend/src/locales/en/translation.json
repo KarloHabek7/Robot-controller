@@ -168,7 +168,7 @@
     },
     "navigation": {
         "controlInterface": "Control Interface",
-        "connectionSettings": "Connection\n& Settings",
+        "connectionSettings": "Connection",
         "jointControl": "Joint\nControl",
         "tcpControl": "TCP\nControl",
         "commands": "Commands",
@@ -197,5 +197,17 @@
         "failedToRevoke": "Failed to revoke user",
         "failedToDelete": "Failed to delete user",
         "failedToFetch": "Failed to fetch users"
+    },
+    "safety": {
+        "normal": "Normal",
+        "reduced": "Reduced",
+        "protectiveStop": "Protective Stop",
+        "recovery": "Recovery",
+        "safeguardStop": "Safeguard Stop",
+        "systemStop": "System E-Stop",
+        "robotStop": "Robot E-Stop",
+        "unknown": "Unknown Status",
+        "resetUI": "Reset UI State",
+        "acknowledgeOnController": "Acknowledge on Robot Controller"
     }
 }

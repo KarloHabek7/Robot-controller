@@ -106,10 +106,6 @@ const JointControlTable = () => {
     <div className="bg-card border rounded-xl p-6 h-full flex flex-col shadow-sm">
       {/* Header Controls */}
       <div className="flex flex-col gap-4 mb-6">
-        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-          {t('robot.jointControl')}
-        </h3>
-
         <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-secondary/5 rounded-lg border border-border/40">
           {/* Global Increment Adjustment */}
           <div className="flex items-center gap-2">

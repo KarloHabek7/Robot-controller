@@ -1,73 +1,45 @@
-# Welcome to your Lovable project
+# UR5 Robot Control System
 
-## Project info
+Advanced robot control interface for Universal Robots (UR5/UR10) with real-time 3D coordinate tracking and precision movement commands.
 
-**URL**: https://lovable.dev/projects/3684144d-f81e-4ba3-800e-fa9f879588af
+## Features
 
-## How can I edit this code?
+- **Real-time Monitoring**: Track robot position and orientation in 3D.
+- **Precision Control**: Move the robot via Joint or TCP coordinates with adjustable increments.
+- **Program Management**: Select and run programs directly from the interface.
+- **Industrial Design**: High-performance, low-latency dashboard with dark/light mode support.
+- **Secure Access**: Integrated authentication system.
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React, Vite, TypeScript, Tailwind CSS, shadcn/ui
+- **Backend**: Python (FastAPI/Flask) - Integrated via the main `run.py`
+- **3D Visualization**: Three.js / React Three Fiber
+- **Icons**: Lucide React & Custom Robot Branding
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/3684144d-f81e-4ba3-800e-fa9f879588af) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js & npm
+- Python 3.10+
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation & Development
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. **Backend Setup**:
+   Ensure your Python environment is set up and dependencies are installed.
+   ```ps1
+   python run.py
+   ```
 
-Follow these steps:
+2. **Frontend Setup**:
+   Navigate to the `frontend` directory:
+   ```sh
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Deployment
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/3684144d-f81e-4ba3-800e-fa9f879588af) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+The application is designed to be served from a local industrial workstation connected to the robot network.

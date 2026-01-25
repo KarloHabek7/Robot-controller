@@ -168,7 +168,7 @@
     },
     "navigation": {
         "controlInterface": "Kontrolno Sučelje",
-        "connectionSettings": "Veza i\nPostavke",
+        "connectionSettings": "Veza",
         "jointControl": "Upravljanje\nZglobovima",
         "tcpControl": "TCP\nUpravljanje",
         "commands": "Naredbe",
@@ -197,5 +197,17 @@
         "failedToRevoke": "Opoziv korisnika nije uspjelo",
         "failedToDelete": "Brisanje korisnika nije uspjelo",
         "failedToFetch": "Dohvaćanje korisnika nije uspjelo"
+    },
+    "safety": {
+        "normal": "Normalno",
+        "reduced": "Smanjeno",
+        "protectiveStop": "Protektivno Zaustavljanje",
+        "recovery": "Oporavak",
+        "safeguardStop": "Sigurnosno Zaustavljanje",
+        "systemStop": "Sistemski E-Stop",
+        "robotStop": "Robotski E-Stop",
+        "unknown": "Nepoznat Status",
+        "resetUI": "Resetiraj UI",
+        "acknowledgeOnController": "Potvrdite na kontroleru robota"
     }
 }

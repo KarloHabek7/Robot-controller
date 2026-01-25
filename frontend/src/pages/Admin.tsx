@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { Navbar } from "@/components/Navbar";
 
 interface User {
     id: number;
@@ -89,69 +90,68 @@ const Admin = () => {
     if (loading) return <div className="flex items-center justify-center min-h-screen">{t('common.loading')}</div>;
 
     return (
-        <div className="container py-8 mx-auto">
-            <div className="flex items-center justify-between mb-8">
-                <h1 className="text-3xl font-bold">{t('admin.dashboard')}</h1>
-                <div className="space-x-4">
-                    <Button variant="outline" onClick={() => navigate("/")}>{t('robot.control')}</Button>
-                    <Button variant="destructive" onClick={signOut}>{t('auth.logout')}</Button>
+        <div className="flex flex-col min-h-screen">
+            <Navbar />
+            <div className="flex-1 container py-8 mx-auto px-4 md:px-0">
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-3xl font-black uppercase tracking-widest text-foreground/80">{t('admin.dashboard')}</h1>
                 </div>
-            </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>{t('admin.userManagement')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>{t('admin.username')}</TableHead>
-                                <TableHead>{t('admin.email')}</TableHead>
-                                <TableHead>{t('admin.status')}</TableHead>
-                                <TableHead>{t('admin.role')}</TableHead>
-                                <TableHead className="text-right">{t('admin.actions')}</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {users.map((u) => (
-                                <TableRow key={u.id}>
-                                    <TableCell>{u.id}</TableCell>
-                                    <TableCell>{u.username}</TableCell>
-                                    <TableCell>{u.email}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={u.is_approved ? "default" : "secondary"}>
-                                            {u.is_approved ? t('admin.approved') : t('admin.pending')}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        {u.is_superuser && <Badge variant="outline">{t('admin.admin')}</Badge>}
-                                    </TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        {!u.is_superuser && (
-                                            <>
-                                                {!u.is_approved ? (
-                                                    <Button size="sm" onClick={() => handleApprove(u.id)}>
-                                                        {t('admin.approve')}
-                                                    </Button>
-                                                ) : (
-                                                    <Button size="sm" variant="secondary" onClick={() => handleRevoke(u.id)}>
-                                                        {t('admin.revoke')}
-                                                    </Button>
-                                                )}
-                                                <Button size="sm" variant="destructive" onClick={() => handleDelete(u.id)}>
-                                                    {t('admin.delete')}
-                                                </Button>
-                                            </>
-                                        )}
-                                    </TableCell>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{t('admin.userManagement')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>{t('admin.username')}</TableHead>
+                                    <TableHead>{t('admin.email')}</TableHead>
+                                    <TableHead>{t('admin.status')}</TableHead>
+                                    <TableHead>{t('admin.role')}</TableHead>
+                                    <TableHead className="text-right">{t('admin.actions')}</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                            </TableHeader>
+                            <TableBody>
+                                {users.map((u) => (
+                                    <TableRow key={u.id}>
+                                        <TableCell>{u.id}</TableCell>
+                                        <TableCell>{u.username}</TableCell>
+                                        <TableCell>{u.email}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={u.is_approved ? "default" : "secondary"}>
+                                                {u.is_approved ? t('admin.approved') : t('admin.pending')}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {u.is_superuser && <Badge variant="outline">{t('admin.admin')}</Badge>}
+                                        </TableCell>
+                                        <TableCell className="text-right space-x-2">
+                                            {!u.is_superuser && (
+                                                <>
+                                                    {!u.is_approved ? (
+                                                        <Button size="sm" onClick={() => handleApprove(u.id)}>
+                                                            {t('admin.approve')}
+                                                        </Button>
+                                                    ) : (
+                                                        <Button size="sm" variant="secondary" onClick={() => handleRevoke(u.id)}>
+                                                            {t('admin.revoke')}
+                                                        </Button>
+                                                    )}
+                                                    <Button size="sm" variant="destructive" onClick={() => handleDelete(u.id)}>
+                                                        {t('admin.delete')}
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 };

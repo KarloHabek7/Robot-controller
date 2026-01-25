@@ -22,8 +22,8 @@ export function Header() {
         <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-xl">
-                        <Rocket className="h-6 w-6 text-primary animate-pulse" />
+                    <div className="p-1 bg-primary/10 rounded-xl">
+                        <img src="/logo.png" alt="Logo" className="h-8 w-8 object-contain" />
                     </div>
                     <div className="flex flex-col">
                         <h1 className="text-xl font-black tracking-tight leading-none bg-gradient-to-r from-primary via-blue-500 to-accent bg-clip-text text-transparent hidden sm:block">

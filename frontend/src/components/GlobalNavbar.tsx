@@ -44,8 +44,8 @@ export const GlobalNavbar = () => {
         <header className="h-16 border-b bg-card/80 backdrop-blur-md flex items-center justify-between px-6 z-50 sticky top-0 shadow-sm">
             {/* Left: Branding/Title */}
             <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary font-bold border border-primary/20 shadow-inner">
-                    UR
+                <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-primary/20 shadow-inner bg-white/10">
+                    <img src="/logo.png" alt="UR" className="w-full h-full object-contain p-1.5" />
                 </div>
                 <div>
                     <h1 className="text-lg font-black tracking-tight leading-none text-foreground/90 uppercase">

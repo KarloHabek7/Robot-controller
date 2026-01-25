@@ -4,7 +4,7 @@ import {
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
   MoveUp, MoveDown, RotateCw, RotateCcw,
   Check, RotateCcw as ResetIcon, Settings2,
-  Plus, Minus, Globe, Anchor, Zap
+  Plus, Minus, Globe, Anchor, Zap, Loader2
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from "react-i18next";
@@ -390,21 +390,25 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             <span className="hidden 2xl:inline">{t('common.reset')}</span>
           </Button>
 
-          {!directControlEnabled && (
+          {!directControlEnabled && isTargetDirty && (
             <Button
+              variant="default"
               size="sm"
               onClick={handleApply}
-              disabled={!isTargetDirty || isMoving || isEStopActive}
-              className={cn(
-                "h-7 px-2 2xl:px-3 rounded-lg text-xs font-black tracking-widest transition-all shadow-md shrink-0",
-                isTargetDirty
-                  ? "bg-primary hover:bg-primary/80 text-primary-foreground shadow-primary/20"
-                  : "bg-muted text-muted-foreground opacity-50"
-              )}
+              disabled={isMoving || isEStopActive}
+              className="gap-2 h-7 text-xs bg-primary hover:bg-primary/90"
             >
-              <Check className="w-3.5 h-3.5 mr-1" />
-              <span className="hidden 2xl:inline">{t('common.apply')}</span>
-              <span className="2xl:hidden">{t('common.apply').split(' ')[0]}</span>
+              {isMoving ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {t('robot.moving')}
+                </>
+              ) : (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  {t('robot.apply')}
+                </>
+              )}
             </Button>
           )}
         </div>

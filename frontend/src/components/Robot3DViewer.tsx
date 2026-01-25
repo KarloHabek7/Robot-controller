@@ -4,6 +4,9 @@ import * as THREE from 'three';
 import { useRobotStore } from '@/stores/robotStore';
 import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { toast } from 'sonner';
+import { Shield, ShieldAlert, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { Button } from './ui/button';
+import { useTranslation } from 'react-i18next';
 
 // Helper to map URSim coordinates [x, y, z] to Three.js space [y_ur, z_ur, x_ur]
 const mapURToThree = (x: number, y: number, z: number): [number, number, number] => {
@@ -427,7 +430,29 @@ const RobotScene = () => {
 
 
 const Robot3DViewer = () => {
-  const { isConnected, tcpVisualizationMode, setTCPVisualizationMode } = useRobotStore();
+  const {
+    isConnected,
+    safetyMode,
+    robotMode,
+    clearSafetyStatus,
+    isMoving
+  } = useRobotStore();
+  const { t } = useTranslation();
+
+  const getSafetyStatusInfo = () => {
+    switch (safetyMode) {
+      case 1: return { label: t('safety.normal'), color: 'text-emerald-500', icon: Shield, bg: 'bg-emerald-500/10' };
+      case 2: return { label: t('safety.reduced'), color: 'text-amber-500', icon: Shield, bg: 'bg-amber-500/10' };
+      case 3: return { label: t('safety.protectiveStop'), color: 'text-red-500', icon: ShieldAlert, bg: 'bg-red-500/20' };
+      case 4: return { label: t('safety.recovery'), color: 'text-purple-500', icon: RefreshCcw, bg: 'bg-purple-500/10' };
+      case 5: return { label: t('safety.safeguardStop'), color: 'text-blue-500', icon: Shield, bg: 'bg-blue-500/10' };
+      case 6: return { label: t('safety.systemStop'), color: 'text-red-600', icon: ShieldAlert, bg: 'bg-red-600/20' };
+      case 7: return { label: t('safety.robotStop'), color: 'text-red-600', icon: ShieldAlert, bg: 'bg-red-600/20' };
+      default: return isConnected ? { label: t('safety.unknown'), color: 'text-muted-foreground', icon: Shield, bg: 'bg-muted/10' } : null;
+    }
+  };
+
+  const safetyInfo = getSafetyStatusInfo();
 
   return (
     // Changed: Removed min-h-[400px], added h-full w-full to fill parent
@@ -465,6 +490,48 @@ const Robot3DViewer = () => {
           far={4}
         />
       </Canvas>
+
+      {/* Top Left Status & Reset Actions */}
+      <div className="absolute top-4 left-4 flex flex-col gap-2">
+        {isConnected && safetyInfo && (
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md shadow-lg transition-all border-border/40",
+            safetyInfo.bg
+          )}>
+            <safetyInfo.icon className={cn("w-3.5 h-3.5", safetyInfo.color)} />
+            <span className={cn("text-[10px] font-black uppercase tracking-wider", safetyInfo.color)}>
+              {safetyInfo.label}
+            </span>
+          </div>
+        )}
+
+        {(safetyMode === 3 || isMoving) && isConnected && (
+          <Button
+            onClick={() => {
+              clearSafetyStatus();
+              toast.info('Movement state cleared');
+            }}
+            variant="outline"
+            size="sm"
+            className="h-8 bg-background/60 backdrop-blur-md border-border/40 text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/20 hover:text-primary hover:border-primary/50"
+          >
+            <RefreshCcw className="w-3 h-3" />
+            {t('safety.resetUI')}
+          </Button>
+        )}
+      </div>
+
+      {/* Protective Stop Overlay Warning */}
+      {isConnected && safetyMode === 3 && (
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center animate-pulse pointer-events-none">
+          <div className="border-4 border-red-500/50 rounded-[40px] absolute inset-8" />
+          <div className="bg-red-500/90 text-white px-8 py-4 rounded-2xl shadow-2xl flex flex-col items-center gap-2 backdrop-blur-xl border border-white/20">
+            <AlertTriangle className="w-12 h-12" />
+            <h2 className="text-xl font-black uppercase tracking-[0.2em]">{t('safety.protectiveStop')}</h2>
+            <p className="text-[10px] opacity-70 font-bold uppercase tracking-widest">{t('safety.acknowledgeOnController')}</p>
+          </div>
+        </div>
+      )}
 
       {/* Decorative corners */}
       <div className="absolute top-4 left-4 border-l-2 border-t-2 border-primary/30 w-8 h-8 pointer-events-none" />

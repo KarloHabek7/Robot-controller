@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, Wifi, Monitor, Sun, Moon, Languages } from 'lucide-react';
-import { useTheme } from "./theme-provider";
+import { Settings, Wifi } from 'lucide-react';
 
 interface RobotConfigurationProps {
   host: string;
@@ -13,8 +12,7 @@ interface RobotConfigurationProps {
 }
 
 const RobotConfiguration = ({ host, port, onChange }: RobotConfigurationProps) => {
-  const { t, i18n } = useTranslation();
-  const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
   const [localIP, setLocalIP] = useState(host);
   const [localPort, setLocalPort] = useState(port.toString());
 
@@ -85,75 +83,6 @@ const RobotConfiguration = ({ host, port, onChange }: RobotConfigurationProps) =
           </div>
         </div>
 
-        {/* Application Settings Section */}
-        <div className="pt-6 border-t border-border/50">
-          <div className="flex items-center gap-2 mb-4">
-            <Monitor className="w-4 h-4 text-primary" />
-            <Label className="text-xs text-muted-foreground font-semibold">
-              {t('settings.title')}
-            </Label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2.5">
-              <div className="flex items-center gap-1.5 pl-1">
-                <Sun className="w-3 h-3 text-muted-foreground" />
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                  {t('settings.theme')}
-                </Label>
-              </div>
-              <div className="flex p-1 bg-secondary/20 rounded-lg gap-1">
-                <Button
-                  variant={theme === 'light' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={`flex-1 h-7 text-[10px] uppercase font-bold transition-all ${theme === 'light' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground'
-                    }`}
-                  onClick={() => setTheme('light')}
-                >
-                  {t('theme.light').split(' ')[0]}
-                </Button>
-                <Button
-                  variant={theme === 'dark' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={`flex-1 h-7 text-[10px] uppercase font-bold transition-all ${theme === 'dark' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground'
-                    }`}
-                  onClick={() => setTheme('dark')}
-                >
-                  {t('theme.dark').split(' ')[0]}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2.5">
-              <div className="flex items-center gap-1.5 pl-1">
-                <Languages className="w-3 h-3 text-muted-foreground" />
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                  {t('settings.language')}
-                </Label>
-              </div>
-              <div className="flex p-1 bg-secondary/20 rounded-lg gap-1">
-                <Button
-                  variant={i18n.language === 'en' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={`flex-1 h-7 text-[10px] uppercase font-bold transition-all ${i18n.language === 'en' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground'
-                    }`}
-                  onClick={() => i18n.changeLanguage('en')}
-                >
-                  EN
-                </Button>
-                <Button
-                  variant={i18n.language === 'hr' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={`flex-1 h-7 text-[10px] uppercase font-bold transition-all ${i18n.language === 'hr' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground'
-                    }`}
-                  onClick={() => i18n.changeLanguage('hr')}
-                >
-                  HR
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Robot Info Section */}
         <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/10 rounded-xl border border-border/50">

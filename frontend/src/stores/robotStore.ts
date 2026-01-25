@@ -98,6 +98,8 @@ interface RobotState {
   speedControlSupported: boolean; // True if robot supports RTDE speed control
   isEStopActive: boolean;
   directControlEnabled: boolean;
+  safetyMode: number;
+  robotMode: number;
 
   // === ACTIONS ===
   setActiveControlMode: (mode: ControlMode) => void;
@@ -129,9 +131,10 @@ interface RobotState {
   setDirectControlEnabled: (enabled: boolean) => void;
 
   // Sync state
-  syncActualState: (joints: number[], tcpPose: number[], tcpOffset?: number[], speed?: number) => void;
+  syncActualState: (joints: number[], tcpPose: number[], tcpOffset?: number[], speed?: number, safetyMode?: number, robotMode?: number) => void;
 
   resetTargetToActual: () => void;
+  clearSafetyStatus: () => void;
   commitTargetJoints: () => void;
   commitTargetTcp: () => void;
 }
@@ -178,6 +181,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   speedControlSupported: true, // Assume true until we check
   isEStopActive: false,
   directControlEnabled: false,
+  safetyMode: -1,
+  robotMode: -1,
 
   // === ACTIONS ===
 
@@ -265,6 +270,19 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       targetJoints: [...state.actualJoints],
       targetTcpPose: [...state.actualTcpPose],
       isTargetDirty: false,
+      isMoving: false, // Reset moving state as well if user forces a reset
+    }));
+  },
+
+  /**
+   * Force clear any blocking safety states/moving flags
+   */
+  clearSafetyStatus: () => {
+    set((state) => ({
+      isMoving: false,
+      isTargetDirty: false,
+      targetJoints: [...state.actualJoints],
+      targetTcpPose: [...state.actualTcpPose],
     }));
   },
 
@@ -273,10 +291,16 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    * Does not affect target state
    * Updates isTargetDirty based on comparison with current target
    */
-  syncActualState: (joints: number[], tcpPose: number[], tcpOffset: number[] = [0, 0, 0, 0, 0, 0], speed?: number) => {
+  syncActualState: (joints: number[], tcpPose: number[], tcpOffset: number[] = [0, 0, 0, 0, 0, 0], speed?: number, safetyMode?: number, robotMode?: number) => {
     set((state) => {
       // Convert speed from 0.0-1.0 (robot) to 0-100 (UI)
       const robotSpeedValue = speed !== undefined ? Math.round(speed * 100) : state.robotSpeed;
+
+      const newSafetyMode = safetyMode !== undefined ? safetyMode : state.safetyMode;
+      const newRobotMode = robotMode !== undefined ? robotMode : state.robotMode;
+
+      // Update E-Stop based on safety mode
+      const isEStopActiveFromSafety = newSafetyMode === 7 || newSafetyMode === 3 || newSafetyMode === 4; // Emergency or Protective Stop
 
       // 1. Ghost Sync on Connect/Idle: If strictly clean and not moving, follow the robot.
       if (!state.isTargetDirty && !state.isMoving) {
@@ -287,6 +311,9 @@ export const useRobotStore = create<RobotState>((set, get) => ({
           targetJoints: joints,
           targetTcpPose: tcpPose,
           robotSpeed: robotSpeedValue,
+          safetyMode: newSafetyMode,
+          robotMode: newRobotMode,
+          isEStopActive: isEStopActiveFromSafety,
           isTargetDirty: false,
           isMoving: false
         };
@@ -319,6 +346,9 @@ export const useRobotStore = create<RobotState>((set, get) => ({
             targetJoints: syncJoints ? joints : state.targetJoints,
             targetTcpPose: syncTcp ? tcpPose : state.targetTcpPose,
             robotSpeed: robotSpeedValue,
+            safetyMode: newSafetyMode,
+            robotMode: newRobotMode,
+            isEStopActive: isEStopActiveFromSafety,
             isTargetDirty: false,
             isMoving: false,
             movementProgress: 100
@@ -334,6 +364,9 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         actualTcpPose: tcpPose,
         actualTcpOffset: tcpOffset,
         robotSpeed: robotSpeedValue,
+        safetyMode: newSafetyMode,
+        robotMode: newRobotMode,
+        isEStopActive: isEStopActiveFromSafety,
         isTargetDirty: isDirty,
       };
     });
