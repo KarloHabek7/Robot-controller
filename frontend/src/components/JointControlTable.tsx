@@ -111,27 +111,42 @@ const JointControlTable = () => {
         </h3>
 
         <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-secondary/5 rounded-lg border border-border/40">
-          {/* Global Increment Input */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
-                {t('robot.increment')}:
-              </span>
-              <div className="relative w-16">
-                <Input
-                  type="number"
-                  value={incrementOverride}
-                  onChange={(e) => setIncrementOverride(e.target.value)}
-                  className="h-7 pr-4 text-xs text-right bg-background shadow-sm"
-                  min={0.1}
-                  step={0.1}
+          {/* Global Increment Adjustment */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-secondary/10 rounded-full border border-border/40 pl-3 pr-1 py-0.5 gap-2">
+              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">Step (°)</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full hover:bg-white/10"
+                  onClick={() => setIncrementOverride((Math.max(0.1, parseFloat(incrementOverride) - 0.5)).toFixed(1))}
                   disabled={isMoving || isEStopActive}
-                />
-                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">°</span>
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <div className="w-8">
+                  <Input
+                    type="number"
+                    value={incrementOverride}
+                    onChange={(e) => setIncrementOverride(e.target.value)}
+                    className="h-5 border-0 bg-transparent p-0 text-[11px] font-black text-center focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    disabled={isMoving || isEStopActive}
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full hover:bg-white/10"
+                  onClick={() => setIncrementOverride((parseFloat(incrementOverride) + 0.5).toFixed(1))}
+                  disabled={isMoving || isEStopActive}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
               </div>
             </div>
 
-            <div className="h-4 w-px bg-border/40" />
+            <div className="h-4 w-px bg-border/40 mx-1" />
 
             <div className="flex items-center gap-2">
               <Zap className={`w-3.5 h-3.5 ${directControlEnabled ? 'text-amber-500 fill-amber-500/20' : 'text-muted-foreground'}`} />
@@ -202,20 +217,20 @@ const JointControlTable = () => {
                 : 'bg-secondary/10 border-border/50'
                 } ${(isMoving || isEStopActive) ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              {/* Joint Name - Reduced width to w-16 */}
-              <div className="w-16 shrink-0">
+              {/* Joint Name - Compact */}
+              <div className="w-14 shrink-0">
                 <div className="text-[10px] text-muted-foreground font-mono">J{joint.id}</div>
                 <div className="text-sm font-bold text-foreground leading-tight truncate" title={joint.name}>
                   {joint.name}
                 </div>
               </div>
 
-              {/* Buttons - Kept compact */}
+              {/* Buttons - Circular style like TCP */}
               <div className="flex gap-1 shrink-0">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+                  className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
                   onClick={() => handleIncrement(joint.id, '-')}
                   disabled={isMoving}
                   title={`-${incrementOverride}°`}
@@ -225,7 +240,7 @@ const JointControlTable = () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors shrink-0"
+                  className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors shrink-0"
                   onClick={() => handleIncrement(joint.id, '+')}
                   disabled={isMoving}
                   title={`+${incrementOverride}°`}
@@ -234,8 +249,8 @@ const JointControlTable = () => {
                 </Button>
               </div>
 
-              {/* Slider - flex-1 allows it to fill all gained space */}
-              <div className="flex-1 px-2 min-w-[40px]">
+              {/* Slider - flex-1 takes all available middle space */}
+              <div className="flex-1 px-4 min-w-[60px]">
                 <Slider
                   value={[targetAngle]}
                   onValueChange={(values) => handleSliderChange(joint.id, values[0])}
@@ -248,31 +263,31 @@ const JointControlTable = () => {
                 />
               </div>
 
-              {/* Input - Reduced width to w-20 (~80px) */}
-              <div className="w-20 shrink-0">
-                <div className="flex items-center bg-background border rounded h-8 px-1 focus-within:ring-1 focus-within:ring-primary/30 transition-shadow">
-                  <Input
-                    type="number"
-                    value={targetAngle.toFixed(2)}
-                    onChange={(e) => handleInputChange(joint.id, e.target.value)}
-                    disabled={isMoving}
-                    className="border-0 p-0 h-6 text-sm text-center focus-visible:ring-0 font-mono w-full min-w-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="text-[10px] text-muted-foreground ml-0.5">°</span>
-                </div>
-              </div>
-
-              {/* Actual Display - Reduced width to w-24 and aligned text to right to eliminate visual gap */}
-              <div className="w-24 shrink-0 flex flex-col gap-0.5 text-right">
-                <div className="text-[10px] text-muted-foreground font-mono truncate" title={`Actual: ${actualAngle.toFixed(2)}°`}>
-                  Act: {actualAngle.toFixed(2)}°
-                </div>
-                {isDirty && (
-                  <div className={`text-[10px] font-semibold font-mono truncate ${delta > 0 ? 'text-primary' : 'text-destructive'
-                    }`}>
-                    Δ {delta > 0 ? '+' : ''}{delta.toFixed(2)}°
+              {/* Right Cluster: Input and status */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-20 shrink-0">
+                  <div className="flex items-center bg-background border rounded h-8 px-1 focus-within:ring-1 focus-within:ring-primary/30 transition-shadow">
+                    <Input
+                      type="number"
+                      value={targetAngle.toFixed(2)}
+                      onChange={(e) => handleInputChange(joint.id, e.target.value)}
+                      disabled={isMoving}
+                      className="border-0 p-0 h-6 text-sm text-center focus-visible:ring-0 font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <span className="text-[10px] text-muted-foreground ml-0.5">°</span>
                   </div>
-                )}
+                </div>
+
+                <div className="w-20 shrink-0 flex flex-col gap-0 justify-center text-right overflow-hidden pr-1">
+                  <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight truncate">
+                    Act: <span className="text-foreground/80">{actualAngle.toFixed(2)}°</span>
+                  </div>
+                  {isDirty && (
+                    <div className="text-[9px] font-bold font-mono text-primary leading-tight truncate">
+                      Δ {delta > 0 ? '+' : ''}{delta.toFixed(2)}°
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );

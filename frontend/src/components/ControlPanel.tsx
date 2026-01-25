@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useRobotStore } from '@/stores/robotStore';
 import { cn } from '@/lib/utils';
 import * as THREE from 'three';
+import IsometricAxes from './IsometricAxes';
 
 // --- Math Helpers ---
 
@@ -217,134 +218,138 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
 
   // --- Render Helpers ---
 
-  const renderInputRow = (label: string, index: number, unit: string) => {
+  // Row for a single coordinate matching JointControlTable style
+  const renderCoordinateRow = (label: string, index: number, unit: string) => {
     const target = displayTargetPose[index];
     const actual = displayActualPose[index];
     const diff = target - actual;
     const isDirty = Math.abs(diff) > 0.005;
 
     return (
-      <div className="flex items-center gap-1.5 mb-1 last:mb-0">
-        <span className="w-4 text-[9px] font-black text-muted-foreground/50 uppercase">{label}</span>
+      <div
+        key={index}
+        className={cn(
+          "flex items-center justify-between p-2 rounded-lg border transition-all",
+          isDirty
+            ? "bg-primary/5 border-primary/50 shadow-sm"
+            : "bg-secondary/10 border-border/50",
+          (isMoving || isEStopActive) && "opacity-50 pointer-events-none"
+        )}
+      >
+        {/* Left: Label and Buttons Group */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="w-6 flex items-center justify-center">
+            <span className="font-black text-xs text-muted-foreground uppercase">{label}</span>
+          </div>
 
-        <div className="relative flex-1">
-          <Input
-            type="number"
-            value={Number(target.toFixed(2))}
-            onChange={(e) => handleInputChange(index, e.target.value)}
-            disabled={isMoving || isEStopActive}
-            className={cn(
-              "h-7 text-[10px] font-mono text-right pr-6 transition-all bg-background/30 border-border/20",
-              isDirty ? "border-amber-500/40 bg-amber-500/10 text-amber-500 font-bold" : "text-foreground"
-            )}
-          />
-          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground/30 pointer-events-none">
-            {unit}
-          </span>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+              onClick={() => handleJog(index, -1)}
+              disabled={isMoving}
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors shrink-0"
+              onClick={() => handleJog(index, 1)}
+              disabled={isMoving}
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         </div>
 
-        <div className="w-16 flex flex-col items-end leading-[1.1]">
-          <div className="flex items-center gap-1 text-[8px]">
-            <span className="text-muted-foreground/30 font-medium whitespace-nowrap">Act:</span>
-            <span className="font-mono font-bold text-muted-foreground/60">{fmt(actual)}</span>
-          </div>
-          {isDirty && (
-            <div className="flex items-center gap-0.5 text-[8px]">
-              <span className="text-amber-500/40 font-medium">Δ:</span>
-              <span className="text-amber-500 font-mono font-bold">
-                {diff > 0 ? '+' : ''}{fmt(diff)}
-              </span>
+        {/* Right: Input and Actuals Group */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative w-20">
+            <div className="flex items-center bg-background border rounded h-8 px-1 focus-within:ring-1 focus-within:ring-primary/30 transition-shadow">
+              <Input
+                type="number"
+                value={Number(target.toFixed(2))}
+                onChange={(e) => handleInputChange(index, e.target.value)}
+                className="border-0 p-0 h-6 text-sm text-center focus-visible:ring-0 font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="text-[10px] text-muted-foreground ml-0.5">{unit}</span>
             </div>
-          )}
+          </div>
+
+          {/* Status Display - Fixed width reduced to w-14 (56px) for a tighter cluster */}
+          <div className="w-14 flex flex-col gap-0 justify-center text-right overflow-hidden shrink-0 pr-1">
+            <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight truncate">
+              Act: <span className="text-foreground/80">{fmt(actual)}</span>
+            </div>
+            {isDirty && (
+              <div className="text-[9px] font-bold font-mono text-primary leading-tight truncate">
+                Δ {diff > 0 ? '+' : ''}{fmt(diff)}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
-  const StepPicker = ({ value, onChange, unit }: { value: number, onChange: (v: number) => void, unit: string }) => (
-    <div className="flex items-center bg-secondary/10 p-0.5 rounded-lg border border-border/10">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-background/80"
-        onClick={() => onChange(Math.max(0.1, value - 1))}
-      >
-        <Minus className="h-2.5 w-2.5" />
-      </Button>
-      <div className="flex-1 flex items-center justify-center gap-0.5 px-1.5">
-        <input
-          type="number"
-          value={value}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          className="w-8 bg-transparent border-0 p-0 text-[10px] text-center focus:outline-none font-mono font-bold text-foreground"
-        />
-        <span className="text-[8px] text-muted-foreground opacity-30 font-bold uppercase">{unit}</span>
-      </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-background/80"
-        onClick={() => onChange(value + 1)}
-      >
-        <Plus className="h-2.5 w-2.5" />
-      </Button>
-    </div>
-  );
+
 
   return (
-    <div className="space-y-3 max-w-6xl mx-auto flex flex-col h-full overflow-hidden">
+    <div className="h-full flex flex-col space-y-3 max-w-7xl mx-auto p-1">
 
-      {/* Header / Global Actions - Ultra Compact */}
-      <div className="flex items-center justify-between bg-card/60 backdrop-blur-xl border border-border/40 rounded-xl px-4 py-2 shadow-lg sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <Settings2 className="w-3.5 h-3.5 text-primary" />
-            <h2 className="font-black text-[10px] uppercase tracking-wider text-foreground">
-              {t('robot.tcpControl') || 'TCP Control'}
+      {/* Header / Global Actions */}
+      <div className="flex items-center justify-between bg-card/60 backdrop-blur-xl border border-border/40 rounded-xl px-4 py-3 shadow-lg shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Settings2 className="w-5 h-5 text-primary" />
+            <h2 className="font-black text-sm uppercase tracking-wider text-foreground">
+              {t('robot.tcpControl')}
             </h2>
           </div>
 
-          <div className="h-4 w-px bg-border/40" />
+          <div className="h-5 w-px bg-border/40" />
 
           {/* Coordinate System Selector */}
-          <div className="flex items-center bg-secondary/50 p-0.5 rounded-lg border border-border/20">
+          <div className="flex items-center bg-secondary/50 p-1 rounded-lg border border-border/20">
             <button
               onClick={() => setCoordinateMode('base')}
               className={cn(
-                "flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] font-bold transition-all",
+                "flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all",
                 coordinateMode === 'base'
                   ? "bg-background shadow-sm text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Globe className="w-3 h-3" />
-              {t('robot.base').toUpperCase()}
+              <Globe className="w-3.5 h-3.5" />
+              {t('robot.base')}
             </button>
             <button
               onClick={() => setCoordinateMode('tool')}
               className={cn(
-                "flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] font-bold transition-all",
+                "flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all",
                 coordinateMode === 'tool'
                   ? "bg-background shadow-sm text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Anchor className="w-3 h-3" />
-              {t('robot.tool').toUpperCase()}
+              <Anchor className="w-3.5 h-3.5" />
+              {t('robot.tool')}
             </button>
           </div>
         </div>
 
-        <div className="flex gap-1.5">
+        <div className="flex gap-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleReset}
             disabled={isMoving || isEStopActive}
-            className="h-8 px-3 rounded-lg text-[10px] text-muted-foreground hover:text-foreground font-bold"
+            className="h-9 px-4 rounded-lg text-xs text-muted-foreground hover:text-foreground font-bold"
           >
-            <ResetIcon className="w-3 h-3 mr-1.5" />
-            {t('common.reset') || 'Reset'}
+            <ResetIcon className="w-3.5 h-3.5 mr-2" />
+            {t('common.reset')}
           </Button>
 
           <Button
@@ -352,182 +357,281 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             onClick={handleApply}
             disabled={!isTargetDirty || isMoving || isEStopActive}
             className={cn(
-              "h-8 px-5 rounded-lg text-[10px] font-black tracking-widest transition-all shadow-md",
+              "h-9 px-6 rounded-lg text-xs font-black tracking-widest transition-all shadow-md",
               isTargetDirty
                 ? "bg-primary hover:bg-primary/80 text-primary-foreground shadow-primary/20"
                 : "bg-muted text-muted-foreground opacity-50"
             )}
           >
-            <Check className="w-3 h-3 mr-1.5" />
-            {t('common.apply') || 'Apply'}
+            <Check className="w-3.5 h-3.5 mr-2" />
+            {t('common.apply')}
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 flex-1 min-h-0">
 
         {/* --- POSITION CARD --- */}
         <div className={cn(
-          "relative group bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4 transition-all duration-300 hover:shadow-xl",
+          "relative flex flex-col bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4 transition-all duration-300 hover:shadow-xl hover:bg-card/50",
           isEStopActive && "opacity-60 grayscale-[0.5] pointer-events-none"
         )}>
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-500/40 via-blue-500 to-transparent" />
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-blue-500/40 via-blue-500 to-transparent rounded-t-2xl opacity-50" />
 
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h3 className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-              {t('robot.position') || 'Position'}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2">
+              <MoveUp className="w-3 h-3" /> {t('robot.position')}
             </h3>
-            {coordinateMode === 'tool' && (
-              <span className="text-[8px] font-bold text-primary border border-primary/30 px-1.5 py-0.5 rounded uppercase">Tool Frame</span>
-            )}
+            {/* Step Control */}
+            <div className="flex items-center bg-secondary/20 rounded-full border border-border/40 pl-3 pr-1 py-0.5 gap-2">
+              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">Step (mm)</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full hover:bg-white/10"
+                  onClick={() => setPositionStep(Math.max(0.1, positionStep - 1))}
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <div className="w-8">
+                  <Input
+                    type="number"
+                    value={positionStep}
+                    onChange={(e) => setPositionStep(parseFloat(e.target.value) || 0)}
+                    className="h-5 border-0 bg-transparent p-0 text-[11px] font-black text-center focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full hover:bg-white/10"
+                  onClick={() => setPositionStep(positionStep + 1)}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <div className="mb-4 space-y-1 bg-secondary/15 p-3 rounded-xl border border-border/10 backdrop-blur-md">
-            {renderInputRow("X", 0, "mm")}
-            {renderInputRow("Y", 1, "mm")}
-            {renderInputRow("Z", 2, "mm")}
-          </div>
-
-          <div className="flex flex-col items-center gap-4">
-            {/* D-Pad - Scaled Down */}
-            <div className="grid grid-cols-3 gap-1.5">
-              <div />
-              <Button
-                onClick={() => handleJog(0, 1)}
-                disabled={isMoving}
-                size="icon"
-                className="h-10 w-10 lg:h-11 lg:w-11 rounded-xl shadow-md border-primary/10 bg-background hover:bg-primary/5 text-primary active:scale-95"
-                variant="outline"
-              >
-                <ArrowUp className="h-4.5 w-4.5" />
-              </Button>
-              <div />
-
-              <Button
-                onClick={() => handleJog(1, 1)}
-                disabled={isMoving}
-                size="icon"
-                className="h-10 w-10 lg:h-11 lg:w-11 rounded-xl shadow-md border-primary/10 bg-background hover:bg-primary/5 text-primary active:scale-95"
-                variant="outline"
-              >
-                <ArrowLeft className="h-4.5 w-4.5" />
-              </Button>
-
-              <div className="flex items-center justify-center">
-                <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-pulse" />
-              </div>
-
-              <Button
-                onClick={() => handleJog(1, -1)}
-                disabled={isMoving}
-                size="icon"
-                className="h-10 w-10 lg:h-11 lg:w-11 rounded-xl shadow-md border-primary/10 bg-background hover:bg-primary/5 text-primary active:scale-95"
-                variant="outline"
-              >
-                <ArrowRight className="h-4.5 w-4.5" />
-              </Button>
-
-              <div />
-              <Button
-                onClick={() => handleJog(0, -1)}
-                disabled={isMoving}
-                size="icon"
-                className="h-10 w-10 lg:h-11 lg:w-11 rounded-xl shadow-md border-primary/10 bg-background hover:bg-primary/5 text-primary active:scale-95"
-                variant="outline"
-              >
-                <ArrowDown className="h-4.5 w-4.5" />
-              </Button>
-              <div />
+          <div className="flex flex-col gap-6 h-full">
+            {/* Top Row: Inputs */}
+            <div className="space-y-2">
+              {renderCoordinateRow("X", 0, "mm")}
+              {renderCoordinateRow("Y", 1, "mm")}
+              {renderCoordinateRow("Z", 2, "mm")}
             </div>
 
-            {/* Z Controls Row */}
-            <div className="grid grid-cols-2 gap-2 w-full px-2">
-              <Button
-                onClick={() => handleJog(2, 1)}
-                disabled={isMoving}
-                variant="secondary"
-                className="h-10 rounded-xl gap-2 text-[9px] font-black tracking-widest border border-border/40 hover:bg-primary/5 hover:text-primary transition-all shadow-sm"
-              >
-                <MoveUp className="h-3.5 w-3.5" /> Z+
-              </Button>
-              <Button
-                onClick={() => handleJog(2, -1)}
-                disabled={isMoving}
-                variant="secondary"
-                className="h-10 rounded-xl gap-2 text-[9px] font-black tracking-widest border border-border/40 hover:bg-primary/5 hover:text-primary transition-all shadow-sm"
-              >
-                <MoveDown className="h-3.5 w-3.5" /> Z-
-              </Button>
-            </div>
+            {/* Bottom Row: Controls (Refined Isometric Layout) */}
+            <div className="flex-1 min-h-[340px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden">
 
-            {/* Step Selection */}
-            <div className="w-full space-y-1 pt-2 border-t border-border/15">
-              <div className="flex justify-between items-center px-1">
-                <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest leading-none">Pos Step</span>
-                <span className="text-[8px] font-mono text-primary font-bold opacity-70">MM</span>
+              {/* Central Visualization */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-full h-full scale-110">
+                  <IsometricAxes />
+                </div>
               </div>
-              <StepPicker value={positionStep} onChange={setPositionStep} unit="" />
+
+              {/* Z Controls (Flanking Top) */}
+              <div className="absolute top-[62px] left-1/2 -translate-x-[calc(50%+44px)] z-10">
+                <Button
+                  onClick={() => handleJog(2, -1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-blue-500/10 border-blue-500/40 text-blue-400 font-black text-xs hover:bg-blue-500/20 active:scale-90 transition-all shadow-lg shadow-blue-500/10 backdrop-blur-md"
+                >
+                  -Z
+                </Button>
+              </div>
+              <div className="absolute top-[62px] left-1/2 -translate-x-[calc(50%-44px)] z-10">
+                <Button
+                  onClick={() => handleJog(2, 1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-blue-500/10 border-blue-500/40 text-blue-400 font-black text-xs hover:bg-blue-500/20 active:scale-90 transition-all shadow-lg shadow-blue-500/10 backdrop-blur-md"
+                >
+                  +Z
+                </Button>
+              </div>
+
+              {/* X Controls (Flanking Left Down) */}
+              <div className="absolute bottom-[148px] left-8 z-10">
+                <Button
+                  onClick={() => handleJog(0, -1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-red-500/10 border-red-500/40 text-red-400 font-black text-xs hover:bg-red-500/20 active:scale-90 transition-all shadow-lg shadow-red-500/10 backdrop-blur-md"
+                >
+                  -X
+                </Button>
+              </div>
+              <div className="absolute bottom-[68px] left-20 z-10">
+                <Button
+                  onClick={() => handleJog(0, 1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-red-500/10 border-red-500/40 text-red-400 font-black text-xs hover:bg-red-500/20 active:scale-90 transition-all shadow-lg shadow-red-500/10 backdrop-blur-md"
+                >
+                  +X
+                </Button>
+              </div>
+
+              {/* Y Controls (Flanking Right Down) */}
+              <div className="absolute bottom-[148px] right-8 z-10">
+                <Button
+                  onClick={() => handleJog(1, -1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-black text-xs hover:bg-emerald-500/20 active:scale-90 transition-all shadow-lg shadow-emerald-500/10 backdrop-blur-md"
+                >
+                  -Y
+                </Button>
+              </div>
+              <div className="absolute bottom-[68px] right-20 z-10">
+                <Button
+                  onClick={() => handleJog(1, 1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-black text-xs hover:bg-emerald-500/20 active:scale-90 transition-all shadow-lg shadow-emerald-500/10 backdrop-blur-md"
+                >
+                  +Y
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* --- ROTATION CARD --- */}
         <div className={cn(
-          "bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4 relative overflow-hidden transition-all duration-300 hover:shadow-xl flex flex-col",
+          "relative flex flex-col bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4 transition-all duration-300 hover:shadow-xl hover:bg-card/50",
           isEStopActive && "opacity-60 grayscale-[0.5] pointer-events-none"
         )}>
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-emerald-500/40 via-emerald-500 to-transparent" />
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-emerald-500/40 via-emerald-500 to-transparent rounded-t-2xl opacity-50" />
 
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h3 className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-              {t('robot.orientation') || 'Rotation'}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2">
+              <RotateCw className="w-3 h-3" /> {t('robot.orientation')}
             </h3>
-            {coordinateMode === 'tool' && (
-              <span className="text-[8px] font-bold text-emerald-500 border border-emerald-500/30 px-1.5 py-0.5 rounded uppercase">Tool Frame</span>
-            )}
-          </div>
-
-          <div className="mb-4 space-y-1 bg-secondary/15 p-3 rounded-xl border border-border/10 backdrop-blur-md">
-            {renderInputRow("RX", 3, "°")}
-            {renderInputRow("RY", 4, "°")}
-            {renderInputRow("RZ", 5, "°")}
-          </div>
-
-          {/* Rotation Buttons - Balanced Height */}
-          <div className="grid grid-cols-2 gap-1.5 mb-2 flex-1">
-            {[3, 4, 5].map((axis) => (
-              <div key={axis} className="contents">
+            {/* Step Control */}
+            <div className="flex items-center bg-secondary/20 rounded-full border border-border/40 pl-3 pr-1 py-0.5 gap-2">
+              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">Step (°)</span>
+              <div className="flex items-center gap-1">
                 <Button
-                  onClick={() => handleJog(axis, 1)}
-                  disabled={isMoving}
-                  variant="outline"
-                  className="h-9 rounded-xl text-[9px] font-black tracking-widest bg-background/50 border-border/10 text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/30 hover:text-emerald-500 shadow-sm transition-all"
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full hover:bg-white/10"
+                  onClick={() => setRotationStep(Math.max(0.1, rotationStep - 1))}
                 >
-                  <RotateCw className="h-3 w-3 mr-1.5 text-emerald-500/60" />
-                  +R{["X", "Y", "Z"][axis - 3]}
+                  <Minus className="h-3 w-3" />
                 </Button>
+                <div className="w-8">
+                  <Input
+                    type="number"
+                    value={rotationStep}
+                    onChange={(e) => setRotationStep(parseFloat(e.target.value) || 0)}
+                    className="h-5 border-0 bg-transparent p-0 text-[11px] font-black text-center focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
                 <Button
-                  onClick={() => handleJog(axis, -1)}
-                  disabled={isMoving}
-                  variant="outline"
-                  className="h-9 rounded-xl text-[9px] font-black tracking-widest bg-background/50 border-border/10 text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/30 hover:text-emerald-500 shadow-sm transition-all"
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full hover:bg-white/10"
+                  onClick={() => setRotationStep(rotationStep + 1)}
                 >
-                  <RotateCcw className="h-3 w-3 mr-1.5 text-emerald-500/60" />
-                  -R{["X", "Y", "Z"][axis - 3]}
+                  <Plus className="h-3 w-3" />
                 </Button>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-auto space-y-1 pt-2 border-t border-border/15">
-            <div className="flex justify-between items-center px-1">
-              <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest leading-none">Rot Step</span>
-              <span className="text-[8px] font-mono text-emerald-500 font-bold opacity-70">DEG</span>
             </div>
-            <StepPicker value={rotationStep} onChange={setRotationStep} unit="" />
           </div>
 
+          <div className="flex flex-col gap-6 h-full">
+            {/* Top Row: Inputs */}
+            <div className="space-y-2">
+              {renderCoordinateRow("RX", 3, "°")}
+              {renderCoordinateRow("RY", 4, "°")}
+              {renderCoordinateRow("RZ", 5, "°")}
+            </div>
+
+            {/* Bottom Row: Rotation (Refined Isometric Layout) */}
+            <div className="flex-1 min-h-[340px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden">
+
+              {/* Central Visualization */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-full h-full scale-110">
+                  <IsometricAxes />
+                </div>
+              </div>
+
+              {/* RZ Controls (Flanking Top) */}
+              <div className="absolute top-[62px] left-1/2 -translate-x-[calc(50%+44px)] z-10">
+                <Button
+                  onClick={() => handleJog(5, -1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-blue-500/10 border-blue-500/40 text-blue-400 font-black text-xs hover:bg-blue-500/20 active:scale-90 transition-all shadow-lg shadow-blue-500/10 backdrop-blur-md"
+                >
+                  -RZ
+                </Button>
+              </div>
+              <div className="absolute top-[62px] left-1/2 -translate-x-[calc(50%-44px)] z-10">
+                <Button
+                  onClick={() => handleJog(5, 1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-blue-500/10 border-blue-500/40 text-blue-400 font-black text-xs hover:bg-blue-500/20 active:scale-90 transition-all shadow-lg shadow-blue-500/10 backdrop-blur-md"
+                >
+                  +RZ
+                </Button>
+              </div>
+
+              {/* RX Controls (Flanking Left Down) */}
+              <div className="absolute bottom-[148px] left-8 z-10">
+                <Button
+                  onClick={() => handleJog(3, -1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-red-500/10 border-red-500/40 text-red-400 font-black text-xs hover:bg-red-500/20 active:scale-90 transition-all shadow-lg shadow-red-500/10 backdrop-blur-md"
+                >
+                  -RX
+                </Button>
+              </div>
+              <div className="absolute bottom-[68px] left-20 z-10">
+                <Button
+                  onClick={() => handleJog(3, 1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-red-500/10 border-red-500/40 text-red-400 font-black text-xs hover:bg-red-500/20 active:scale-90 transition-all shadow-lg shadow-red-500/10 backdrop-blur-md"
+                >
+                  +RX
+                </Button>
+              </div>
+
+              {/* RY Controls (Flanking Right Down) */}
+              <div className="absolute bottom-[148px] right-8 z-10">
+                <Button
+                  onClick={() => handleJog(4, -1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-black text-xs hover:bg-emerald-500/20 active:scale-90 transition-all shadow-lg shadow-emerald-500/10 backdrop-blur-md"
+                >
+                  -RY
+                </Button>
+              </div>
+              <div className="absolute bottom-[68px] right-20 z-10">
+                <Button
+                  onClick={() => handleJog(4, 1)}
+                  disabled={isMoving}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-black text-xs hover:bg-emerald-500/20 active:scale-90 transition-all shadow-lg shadow-emerald-500/10 backdrop-blur-md"
+                >
+                  +RY
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   );

@@ -41,7 +41,9 @@
         "moving": "Moving...",
         "directControl": "Direct Control",
         "online": "Robot is online",
-        "ready": "Robot is ready"
+        "ready": "Robot is ready",
+        "base": "Base",
+        "tool": "Tool"
     },
     "controls": {
         "joint": "Joint {{number}}",
