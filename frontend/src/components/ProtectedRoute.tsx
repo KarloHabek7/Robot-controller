@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 
@@ -23,6 +23,21 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return null;
+  }
+
+  // Redirect to waiting page if not approved and not superuser
+  if (!user.is_approved && !user.is_superuser) {
+    if (window.location.pathname !== '/waiting-for-approval') {
+      // We can't easily redirect here inside the render efficiently without flashing
+      // But actually we are inside a Router context, so we can use Navigate
+      return <Navigate to="/waiting-for-approval" />;
+    }
+    return <>{children}</>;
+  }
+
+  // If user is accessing admin page but is not superuser
+  if (location.pathname === '/admin' && !user.is_superuser) {
+    return <Navigate to="/" />;
   }
 
   return <>{children}</>;

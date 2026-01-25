@@ -43,7 +43,8 @@
         "online": "Robot is online",
         "ready": "Robot is ready",
         "base": "Base",
-        "tool": "Tool"
+        "tool": "Tool",
+        "relative": "Relative"
     },
     "controls": {
         "joint": "Joint {{number}}",

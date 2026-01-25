@@ -43,7 +43,8 @@
         "online": "Robot je na mreži",
         "ready": "Robot je spreman",
         "base": "Baza",
-        "tool": "Alat"
+        "tool": "Alat",
+        "relative": "Relativno"
     },
     "controls": {
         "joint": "Zglob {{number}}",

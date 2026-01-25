@@ -87,6 +87,22 @@ class ApiClient {
         return response.json();
     }
 
+    // Generic HTTP methods
+    public async get<T>(endpoint: string) {
+        return this.request<T>(endpoint, { method: 'GET' });
+    }
+
+    public async post<T>(endpoint: string, body: any) {
+        return this.request<T>(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+    public async delete<T>(endpoint: string) {
+        return this.request<T>(endpoint, { method: 'DELETE' });
+    }
+
     // Auth endpoints
     async register(username: string, email: string, password: string) {
         return this.request<{ access_token: string; token_type: string }>(
@@ -122,7 +138,7 @@ class ApiClient {
     }
 
     async getCurrentUser() {
-        return this.request<{ username: string; email: string; id: number }>(
+        return this.request<{ username: string; email: string; id: number; is_approved: boolean; is_superuser: boolean }>(
             '/api/auth/me'
         );
     }
@@ -194,9 +210,24 @@ class ApiClient {
         );
     }
 
+    async getPrograms() {
+        return this.request<string[]>(
+            '/api/robot/programs'
+        );
+    }
+
     async stopProgram() {
         return this.request<{ success: boolean; command: string; timestamp: string }>(
             '/api/robot/program/stop',
+            {
+                method: 'POST',
+            }
+        );
+    }
+
+    async pauseProgram() {
+        return this.request<{ success: boolean; command: string; timestamp: string }>(
+            '/api/robot/program/pause',
             {
                 method: 'POST',
             }

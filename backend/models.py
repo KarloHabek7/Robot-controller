@@ -9,6 +9,8 @@ class User(SQLModel, table=True):
     hashed_password: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     is_active: bool = Field(default=True)
+    is_approved: bool = Field(default=False)
+    is_superuser: bool = Field(default=False)
 
 class ActivityLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

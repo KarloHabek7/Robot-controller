@@ -93,7 +93,7 @@ interface RobotState {
   port: number | null;
   robotModel: string;
   tcpVisualizationMode: 'real' | 'linked' | 'both';
-  coordinateMode: 'base' | 'tool';
+  coordinateMode: 'base' | 'tool' | 'relative';
   robotSpeed: number; // 0-100%
   speedControlSupported: boolean; // True if robot supports RTDE speed control
   isEStopActive: boolean;
@@ -118,10 +118,7 @@ interface RobotState {
   // TCP visualization
   setTCPVisualizationMode: (mode: 'real' | 'linked' | 'both') => void;
 
-  // Coordinate Mode
-  setCoordinateMode: (mode: 'base' | 'tool') => void;
-
-  // Speed control
+  setCoordinateMode: (mode: 'base' | 'tool' | 'relative') => void;
   setRobotSpeed: (speed: number) => void;
   setSpeedControlSupported: (supported: boolean) => void;
 
@@ -386,7 +383,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   /**
    * Set Coordinate mode
    */
-  setCoordinateMode: (coordinateMode: 'base' | 'tool') => {
+  setCoordinateMode: (coordinateMode: 'base' | 'tool' | 'relative') => {
     set({ coordinateMode });
   },
 

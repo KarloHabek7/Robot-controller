@@ -235,36 +235,60 @@ async def joint_move(
     else:
         raise HTTPException(status_code=500, detail="Not connected to robot")
 
+@router.get("/programs", response_model=list[str])
+async def get_programs(current_user: User = Depends(get_current_user)):
+    programs = await robot_client.list_programs()
+    return programs
+
 @router.post("/program/start", response_model=CommandResponse)
 async def start_program(
     request: ProgramRequest,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    script = f"def {request.program_name}():\n  # Program code goes here\nend"
-    success = await robot_client.send_command(script)
+    # 1. Load the program
+    load_success = await robot_client.load_program(request.program_name)
+    if not load_success:
+        await run_in_threadpool(log_command, current_user.id, f"Load Program {request.program_name}", False, session)
+        raise HTTPException(status_code=500, detail=f"Failed to load program {request.program_name}")
     
-    await run_in_threadpool(log_command, current_user.id, f"Start Program {request.program_name}", success, session)
+    # 2. Play the program
+    play_success = await robot_client.play_program()
     
-    if success:
-        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+    await run_in_threadpool(log_command, current_user.id, f"Start Program {request.program_name}", play_success, session)
+    
+    if play_success:
+        return CommandResponse(success=True, command=f"load {request.program_name} + play", timestamp=datetime.utcnow().isoformat())
     else:
-        raise HTTPException(status_code=500, detail="Not connected to robot")
+        raise HTTPException(status_code=500, detail="Failed to start program playback")
 
 @router.post("/program/stop", response_model=CommandResponse)
 async def stop_program(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    script = "stop"
-    success = await robot_client.send_command(script)
+    success = await robot_client.stop_program()
     
     await run_in_threadpool(log_command, current_user.id, "Stop Program", success, session)
     
     if success:
-        return CommandResponse(success=True, command=script, timestamp=datetime.utcnow().isoformat())
+        return CommandResponse(success=True, command="dashboard stop", timestamp=datetime.utcnow().isoformat())
     else:
-        raise HTTPException(status_code=500, detail="Not connected to robot")
+        raise HTTPException(status_code=500, detail="Not connected to robot/dashboard")
+
+@router.post("/program/pause", response_model=CommandResponse)
+async def pause_program(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    success = await robot_client.pause_program()
+    
+    await run_in_threadpool(log_command, current_user.id, "Pause Program", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command="dashboard pause", timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail="Not connected to robot/dashboard")
 
 @router.post("/emergency-stop", response_model=CommandResponse)
 async def emergency_stop(

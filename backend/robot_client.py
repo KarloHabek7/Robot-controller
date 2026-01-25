@@ -1,6 +1,8 @@
 import asyncio
 import socket
 import struct
+import ftplib
+import os
 from typing import Optional
 from datetime import datetime
 
@@ -31,6 +33,9 @@ class RobotTCPClient:
         self.latest_state: Optional[dict] = None
         self.feedback_task: Optional[asyncio.Task] = None
         self.rtde_task: Optional[asyncio.Task] = None
+
+        self.ftp_user = "root"
+        self.ftp_password = "easybot"
 
     # RTDE Protocol Constants
     RTDE_REQUEST_PROTOCOL_VERSION = 1
@@ -436,7 +441,78 @@ class RobotTCPClient:
                 await asyncio.sleep(1)
                 
         self.feedback_connected = False
-        print("[RobotClient] Feedback listener stopped")
+    async def list_programs(self) -> list[str]:
+        """List .urp programs via FTP with better robustness."""
+        if not self.host:
+             return []
+        
+        def _ftp_list():
+            programs = []
+            try:
+                # Explicitly use longer timeout for VM/slow networks
+                ftp = ftplib.FTP(timeout=5.0)
+                ftp.connect(self.host, 21)
+                ftp.login(self.ftp_user, self.ftp_password)
+                ftp.set_pasv(True) # Force passive mode
+                
+                # List of potential directories where programs might be stored
+                search_dirs = ["/programs", "/root/programs", "/home/root/programs", "/"]
+                
+                for target_dir in search_dirs:
+                    try:
+                        print(f"[RobotClient] FTP: Trying directory '{target_dir}'")
+                        ftp.cwd(target_dir)
+                        # Use nlst() to get just filenames
+                        files = ftp.nlst()
+                        program_files = [f for f in files if f.endswith('.urp')]
+                        if program_files:
+                            print(f"[RobotClient] FTP: Found {len(program_files)} programs in '{target_dir}'")
+                            # We keep the names and later we might need to handle full paths if they are nested
+                            # but usually URSim keeps them flat in the target dir
+                            programs.extend(program_files)
+                    except Exception as e:
+                        print(f"[RobotClient] FTP: Failed to list '{target_dir}': {e}")
+                        continue
+                
+                # Remove duplicates if any
+                programs = list(set(programs))
+                ftp.quit()
+            except Exception as e:
+                print(f"[RobotClient] FTP global operations failed: {e}")
+            return sorted(programs)
+
+        return await asyncio.to_thread(_ftp_list)
+
+    async def load_program(self, program_name: str) -> bool:
+        """Load a program via Dashboard server."""
+        if not self.dashboard_connected:
+            return False
+        
+        # If the program name is just a filename, but we found it in a specific dir, 
+        # we might need to load by path. For now, assume simple load.
+        result = await self.send_dashboard_command(f"load {program_name}")
+        return result is not None and ("Loading" in result or "Loaded" in result)
+
+    async def play_program(self) -> bool:
+        """Start or Resume loaded program via Dashboard server."""
+        if not self.dashboard_connected:
+            return False
+        result = await self.send_dashboard_command("play")
+        return result is not None and ("Starting" in result or "Playing" in result)
+
+    async def pause_program(self) -> bool:
+        """Pause program via Dashboard server."""
+        if not self.dashboard_connected:
+            return False
+        result = await self.send_dashboard_command("pause")
+        return result is not None and ("Pausing" in result or "Paused" in result)
+
+    async def stop_program(self) -> bool:
+        """Stop program via Dashboard server."""
+        if not self.dashboard_connected:
+            return False
+        result = await self.send_dashboard_command("stop")
+        return result is not None and ("Stopped" in result or "Stopping" in result)
 
 
 # Global robot client instance

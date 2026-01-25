@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from backend.database import create_db_and_tables
-from backend.api.routes import auth, robot
+from backend.api.routes import auth, robot, admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,8 +29,8 @@ app.add_middleware(
 # Include Routers
 app.include_router(auth.router)
 app.include_router(robot.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def read_root():
     return {"message": "UR5 Controller API is running"}
-

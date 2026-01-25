@@ -26,6 +26,8 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
+    is_approved: bool
+    is_superuser: bool
 
 @router.post("/register", response_model=Token)
 def register(user_data: UserRegister, session: Session = Depends(get_session)):
@@ -47,12 +49,18 @@ def register(user_data: UserRegister, session: Session = Depends(get_session)):
             detail="Email already registered"
         )
     
+    # Check if this is the first user
+    user_count = session.exec(select(User)).all()
+    is_first_user = len(user_count) == 0
+
     # Create user
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
         username=user_data.username,
         email=user_data.email,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        is_superuser=is_first_user,
+        is_approved=is_first_user
     )
     session.add(new_user)
     session.commit()

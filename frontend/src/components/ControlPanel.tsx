@@ -4,15 +4,17 @@ import {
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
   MoveUp, MoveDown, RotateCw, RotateCcw,
   Check, RotateCcw as ResetIcon, Settings2,
-  Plus, Minus, Globe, Anchor
+  Plus, Minus, Globe, Anchor, Zap
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from "react-i18next";
 import { toast } from 'sonner';
 import { useRobotStore } from '@/stores/robotStore';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import * as THREE from 'three';
-import IsometricAxes from './IsometricAxes';
+import ThreeIsometricAxes from './ThreeIsometricAxes';
 
 // --- Math Helpers ---
 
@@ -115,7 +117,9 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
     updateTargetTcp,
     commitTargetTcp,
     resetTargetToActual,
-    setCoordinateMode
+    setCoordinateMode,
+    directControlEnabled,
+    setDirectControlEnabled,
   } = useRobotStore();
 
   // --- UI Converters ---
@@ -145,9 +149,9 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
     ? targetTcpPose
     : poseTrans(poseInv(actualTcpPose), targetTcpPose);
 
-  const displayActualPose = coordinateMode === 'base'
-    ? actualTcpPose
-    : [0, 0, 0, 0, 0, 0];
+  const displayActualPose = (coordinateMode === 'tool' || coordinateMode === 'relative')
+    ? [0, 0, 0, 0, 0, 0]
+    : actualTcpPose;
 
   // Helper to format numbers for display
   const fmt = (num: number) => num.toFixed(2);
@@ -175,6 +179,10 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
       const newBasePose = poseTrans(actualTcpPose, currentRelative);
       updateTargetTcp(toRobot(newBasePose));
     }
+
+    if (directControlEnabled) {
+      setTimeout(() => commitTargetTcp(), 0);
+    }
   };
 
   // Jog handler (Buttons)
@@ -186,16 +194,26 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
     const step = isRotation ? rotationStep : positionStep;
 
     if (coordinateMode === 'base') {
-      // Base frame: simple addition in UI units
+      // Base frame: simple addition in UI units (cumulative on target)
       const newUiPose = [...targetTcpPose];
       newUiPose[axisIndex] = Number((newUiPose[axisIndex] + step * direction).toFixed(2));
       updateTargetTcp(toRobot(newUiPose));
+    } else if (coordinateMode === 'tool') {
+      // Tool frame: Jogging is relative to the ACTUAL position, but preserves other adjustments
+      const currentRelative = poseTrans(poseInv(actualTcpPose), targetTcpPose);
+      currentRelative[axisIndex] = Number((currentRelative[axisIndex] + step * direction).toFixed(2));
+      const newUiPose = poseTrans(actualTcpPose, currentRelative);
+      updateTargetTcp(toRobot(newUiPose));
     } else {
-      // Tool frame: Jogging is ALWAYS relative to the CURRENT TARGET in its own frame
+      // Relative frame: Jogging is ALWAYS relative to the CURRENT TARGET in its own frame (cumulative)
       const relativeMove = [0, 0, 0, 0, 0, 0];
       relativeMove[axisIndex] = step * direction;
       const newUiPose = poseTrans(targetTcpPose, relativeMove);
       updateTargetTcp(toRobot(newUiPose));
+    }
+
+    if (directControlEnabled) {
+      setTimeout(() => commitTargetTcp(), 0);
     }
   };
 
@@ -266,7 +284,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
 
         {/* Right: Input and Actuals Group */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="relative w-20">
+          <div className="relative w-[85px]">
             <div className="flex items-center bg-background border rounded h-8 px-1 focus-within:ring-1 focus-within:ring-primary/30 transition-shadow">
               <Input
                 type="number"
@@ -278,8 +296,8 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             </div>
           </div>
 
-          {/* Status Display - Fixed width reduced to w-14 (56px) for a tighter cluster */}
-          <div className="w-14 flex flex-col gap-0 justify-center text-right overflow-hidden shrink-0 pr-1">
+          {/* Status Display - Adjusted width for longer values */}
+          <div className="w-[66px] flex flex-col gap-0 justify-center text-right overflow-hidden shrink-0 pr-1">
             <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight truncate">
               Act: <span className="text-foreground/80">{fmt(actual)}</span>
             </div>
@@ -302,41 +320,61 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
       {/* Header / Global Actions */}
       <div className="flex items-center justify-between bg-card/60 backdrop-blur-xl border border-border/40 rounded-xl px-4 py-3 shadow-lg shrink-0">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Settings2 className="w-5 h-5 text-primary" />
-            <h2 className="font-black text-sm uppercase tracking-wider text-foreground">
-              {t('robot.tcpControl')}
-            </h2>
-          </div>
-
-          <div className="h-5 w-px bg-border/40" />
 
           {/* Coordinate System Selector */}
           <div className="flex items-center bg-secondary/50 p-1 rounded-lg border border-border/20">
             <button
               onClick={() => setCoordinateMode('base')}
               className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all",
+                "flex items-center gap-2 px-2 xl:px-3 py-1.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all",
                 coordinateMode === 'base'
                   ? "bg-background shadow-sm text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Globe className="w-3.5 h-3.5" />
-              {t('robot.base')}
+              <span className="hidden xl:inline">{t('robot.base')}</span>
             </button>
             <button
               onClick={() => setCoordinateMode('tool')}
               className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all",
+                "flex items-center gap-2 px-2 xl:px-3 py-1.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all",
                 coordinateMode === 'tool'
                   ? "bg-background shadow-sm text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Anchor className="w-3.5 h-3.5" />
-              {t('robot.tool')}
+              <span className="hidden xl:inline">{t('robot.tool')}</span>
             </button>
+            <button
+              onClick={() => setCoordinateMode('relative')}
+              className={cn(
+                "flex items-center gap-2 px-2 xl:px-3 py-1.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all",
+                coordinateMode === 'relative'
+                  ? "bg-background shadow-sm text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">{t('robot.relative')}</span>
+            </button>
+          </div>
+
+          <div className="h-5 w-px bg-border/40" />
+
+          <div className="flex items-center gap-2 max-w-[100px] xl:max-w-none">
+            <Zap className={`w-3.5 h-3.5 shrink-0 ${directControlEnabled ? 'text-amber-500 fill-amber-500/20' : 'text-muted-foreground'}`} />
+            <Label htmlFor="direct-control-tcp" className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground cursor-pointer leading-[1.1]">
+              <span className="hidden sm:inline">{t('robot.directControl')}</span>
+              <span className="sm:hidden">Direct</span>
+            </Label>
+            <Switch
+              id="direct-control-tcp"
+              checked={directControlEnabled}
+              onCheckedChange={setDirectControlEnabled}
+              className="scale-75 shrink-0"
+            />
           </div>
         </div>
 
@@ -346,26 +384,29 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             size="sm"
             onClick={handleReset}
             disabled={isMoving || isEStopActive}
-            className="h-9 px-4 rounded-lg text-xs text-muted-foreground hover:text-foreground font-bold"
+            className="h-7 px-1.5 2xl:px-2 rounded-lg text-xs text-muted-foreground hover:text-foreground font-bold shrink-0"
           >
-            <ResetIcon className="w-3.5 h-3.5 mr-2" />
-            {t('common.reset')}
+            <ResetIcon className={cn("w-3.5 h-3.5", "2xl:mr-1")} />
+            <span className="hidden 2xl:inline">{t('common.reset')}</span>
           </Button>
 
-          <Button
-            size="sm"
-            onClick={handleApply}
-            disabled={!isTargetDirty || isMoving || isEStopActive}
-            className={cn(
-              "h-9 px-6 rounded-lg text-xs font-black tracking-widest transition-all shadow-md",
-              isTargetDirty
-                ? "bg-primary hover:bg-primary/80 text-primary-foreground shadow-primary/20"
-                : "bg-muted text-muted-foreground opacity-50"
-            )}
-          >
-            <Check className="w-3.5 h-3.5 mr-2" />
-            {t('common.apply')}
-          </Button>
+          {!directControlEnabled && (
+            <Button
+              size="sm"
+              onClick={handleApply}
+              disabled={!isTargetDirty || isMoving || isEStopActive}
+              className={cn(
+                "h-7 px-2 2xl:px-3 rounded-lg text-xs font-black tracking-widest transition-all shadow-md shrink-0",
+                isTargetDirty
+                  ? "bg-primary hover:bg-primary/80 text-primary-foreground shadow-primary/20"
+                  : "bg-muted text-muted-foreground opacity-50"
+              )}
+            >
+              <Check className="w-3.5 h-3.5 mr-1" />
+              <span className="hidden 2xl:inline">{t('common.apply')}</span>
+              <span className="2xl:hidden">{t('common.apply').split(' ')[0]}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -424,79 +465,72 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             </div>
 
             {/* Bottom Row: Controls (Refined Isometric Layout) */}
-            <div className="flex-1 min-h-[260px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden">
+            <div className="flex-1 min-h-[260px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col items-center justify-center">
 
               {/* Central Visualization */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-full h-full scale-110">
-                  <IsometricAxes />
-                </div>
-              </div>
+              <ThreeIsometricAxes mode="translation" />
 
-              {/* Z Controls (Flanking Top) */}
-              <div className="absolute top-[22px] left-1/2 -translate-x-[calc(50%+44px)] z-10">
-                <Button
-                  onClick={() => handleJog(2, -1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-blue-500/10 border-blue-500/40 text-blue-400 font-black text-xs hover:bg-blue-500/20 active:scale-90 transition-all shadow-lg shadow-blue-500/10 backdrop-blur-md"
-                >
-                  -Z
-                </Button>
-              </div>
-              <div className="absolute top-[22px] left-1/2 -translate-x-[calc(50%-44px)] z-10">
-                <Button
-                  onClick={() => handleJog(2, 1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-blue-500/10 border-blue-500/40 text-blue-400 font-black text-xs hover:bg-blue-500/20 active:scale-90 transition-all shadow-lg shadow-blue-500/10 backdrop-blur-md"
-                >
-                  +Z
-                </Button>
-              </div>
+              {/* Hexagonal Button Layout */}
+              <div className="relative w-full h-full pointer-events-none">
+                {(() => {
+                  const radius = 85;
+                  const centerX = '50%';
+                  const centerY = '50%';
 
-              {/* X Controls (Flanking Left Down) */}
-              <div className="absolute bottom-[108px] left-8 z-10">
-                <Button
-                  onClick={() => handleJog(0, -1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-red-500/10 border-red-500/40 text-red-400 font-black text-xs hover:bg-red-500/20 active:scale-90 transition-all shadow-lg shadow-red-500/10 backdrop-blur-md"
-                >
-                  -X
-                </Button>
-              </div>
-              <div className="absolute bottom-[28px] left-20 z-10">
-                <Button
-                  onClick={() => handleJog(0, 1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-red-500/10 border-red-500/40 text-red-400 font-black text-xs hover:bg-red-500/20 active:scale-90 transition-all shadow-lg shadow-red-500/10 backdrop-blur-md"
-                >
-                  +X
-                </Button>
-              </div>
+                  const controls: { label: string; axis: number; dir: 1 | -1; angle: number; colorClass: string }[] = [
+                    {
+                      label: '+Z', axis: 2, dir: 1, angle: 60,
+                      colorClass: 'bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-blue-500/10 hover:bg-blue-500/20'
+                    },
+                    {
+                      label: '-Z', axis: 2, dir: -1, angle: 120,
+                      colorClass: 'bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-blue-500/10 hover:bg-blue-500/20'
+                    },
+                    {
+                      label: '-X', axis: 0, dir: -1, angle: 180,
+                      colorClass: 'bg-red-500/10 border-red-500/40 text-red-400 shadow-red-500/10 hover:bg-red-500/20'
+                    },
+                    {
+                      label: '+X', axis: 0, dir: 1, angle: 240,
+                      colorClass: 'bg-red-500/10 border-red-500/40 text-red-400 shadow-red-500/10 hover:bg-red-500/20'
+                    },
+                    {
+                      label: '+Y', axis: 1, dir: 1, angle: 300,
+                      colorClass: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10 hover:bg-emerald-500/20'
+                    },
+                    {
+                      label: '-Y', axis: 1, dir: -1, angle: 0,
+                      colorClass: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10 hover:bg-emerald-500/20'
+                    },
+                  ];
 
-              {/* Y Controls (Flanking Right Down) */}
-              <div className="absolute bottom-[108px] right-8 z-10">
-                <Button
-                  onClick={() => handleJog(1, -1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-black text-xs hover:bg-emerald-500/20 active:scale-90 transition-all shadow-lg shadow-emerald-500/10 backdrop-blur-md"
-                >
-                  -Y
-                </Button>
-              </div>
-              <div className="absolute bottom-[28px] right-20 z-10">
-                <Button
-                  onClick={() => handleJog(1, 1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-black text-xs hover:bg-emerald-500/20 active:scale-90 transition-all shadow-lg shadow-emerald-500/10 backdrop-blur-md"
-                >
-                  +Y
-                </Button>
+                  return controls.map((btn) => {
+                    const rad = (btn.angle * Math.PI) / 180;
+                    const x = Math.cos(rad) * radius;
+                    const y = -Math.sin(rad) * radius;
+
+                    return (
+                      <div
+                        key={btn.label}
+                        className="absolute z-10 pointer-events-auto"
+                        style={{
+                          top: `calc(${centerY} + ${y}px)`,
+                          left: `calc(${centerX} + ${x}px)`,
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      >
+                        <Button
+                          onClick={() => handleJog(btn.axis, btn.dir)}
+                          disabled={isMoving}
+                          size="icon"
+                          className={`h-10 w-10 rounded-full font-black text-[10px] active:scale-90 transition-all shadow-lg backdrop-blur-md border ${btn.colorClass}`}
+                        >
+                          {btn.label}
+                        </Button>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>
@@ -554,79 +588,72 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             </div>
 
             {/* Bottom Row: Rotation (Refined Isometric Layout) */}
-            <div className="flex-1 min-h-[260px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden">
+            <div className="flex-1 min-h-[260px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col items-center justify-center">
 
               {/* Central Visualization */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-full h-full scale-110">
-                  <IsometricAxes />
-                </div>
-              </div>
+              <ThreeIsometricAxes mode="rotation" />
 
-              {/* RZ Controls (Flanking Top) */}
-              <div className="absolute top-[22px] left-1/2 -translate-x-[calc(50%+44px)] z-10">
-                <Button
-                  onClick={() => handleJog(5, -1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-blue-500/10 border-blue-500/40 text-blue-400 font-black text-xs hover:bg-blue-500/20 active:scale-90 transition-all shadow-lg shadow-blue-500/10 backdrop-blur-md"
-                >
-                  -RZ
-                </Button>
-              </div>
-              <div className="absolute top-[22px] left-1/2 -translate-x-[calc(50%-44px)] z-10">
-                <Button
-                  onClick={() => handleJog(5, 1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-blue-500/10 border-blue-500/40 text-blue-400 font-black text-xs hover:bg-blue-500/20 active:scale-90 transition-all shadow-lg shadow-blue-500/10 backdrop-blur-md"
-                >
-                  +RZ
-                </Button>
-              </div>
+              {/* Hexagonal Button Layout */}
+              <div className="relative w-full h-full pointer-events-none">
+                {(() => {
+                  const radius = 85;
+                  const centerX = '50%';
+                  const centerY = '50%';
 
-              {/* RX Controls (Flanking Left Down) */}
-              <div className="absolute bottom-[108px] left-8 z-10">
-                <Button
-                  onClick={() => handleJog(3, -1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-red-500/10 border-red-500/40 text-red-400 font-black text-xs hover:bg-red-500/20 active:scale-90 transition-all shadow-lg shadow-red-500/10 backdrop-blur-md"
-                >
-                  -RX
-                </Button>
-              </div>
-              <div className="absolute bottom-[28px] left-20 z-10">
-                <Button
-                  onClick={() => handleJog(3, 1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-red-500/10 border-red-500/40 text-red-400 font-black text-xs hover:bg-red-500/20 active:scale-90 transition-all shadow-lg shadow-red-500/10 backdrop-blur-md"
-                >
-                  +RX
-                </Button>
-              </div>
+                  const controls: { label: string; axis: number; dir: 1 | -1; angle: number; colorClass: string }[] = [
+                    {
+                      label: '+RZ', axis: 5, dir: 1, angle: 60,
+                      colorClass: 'bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-blue-500/10 hover:bg-blue-500/20'
+                    },
+                    {
+                      label: '-RZ', axis: 5, dir: -1, angle: 120,
+                      colorClass: 'bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-blue-500/10 hover:bg-blue-500/20'
+                    },
+                    {
+                      label: '-RX', axis: 3, dir: -1, angle: 180,
+                      colorClass: 'bg-red-500/10 border-red-500/40 text-red-400 shadow-red-500/10 hover:bg-red-500/20'
+                    },
+                    {
+                      label: '+RX', axis: 3, dir: 1, angle: 240,
+                      colorClass: 'bg-red-500/10 border-red-500/40 text-red-400 shadow-red-500/10 hover:bg-red-500/20'
+                    },
+                    {
+                      label: '+RY', axis: 4, dir: 1, angle: 300,
+                      colorClass: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10 hover:bg-emerald-500/20'
+                    },
+                    {
+                      label: '-RY', axis: 4, dir: -1, angle: 0,
+                      colorClass: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-emerald-500/10 hover:bg-emerald-500/20'
+                    },
+                  ];
 
-              {/* RY Controls (Flanking Right Down) */}
-              <div className="absolute bottom-[108px] right-8 z-10">
-                <Button
-                  onClick={() => handleJog(4, -1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-black text-xs hover:bg-emerald-500/20 active:scale-90 transition-all shadow-lg shadow-emerald-500/10 backdrop-blur-md"
-                >
-                  -RY
-                </Button>
-              </div>
-              <div className="absolute bottom-[28px] right-20 z-10">
-                <Button
-                  onClick={() => handleJog(4, 1)}
-                  disabled={isMoving}
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-black text-xs hover:bg-emerald-500/20 active:scale-90 transition-all shadow-lg shadow-emerald-500/10 backdrop-blur-md"
-                >
-                  +RY
-                </Button>
+                  return controls.map((btn) => {
+                    const rad = (btn.angle * Math.PI) / 180;
+                    const x = Math.cos(rad) * radius;
+                    const y = -Math.sin(rad) * radius;
+
+                    return (
+                      <div
+                        key={btn.label}
+                        className="absolute z-10 pointer-events-auto"
+                        style={{
+                          top: `calc(${centerY} + ${y}px)`,
+                          left: `calc(${centerX} + ${x}px)`,
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      >
+                        <Button
+                          onClick={() => handleJog(btn.axis, btn.dir)}
+                          disabled={isMoving}
+                          size="icon"
+                          className={`h-10 w-10 rounded-full font-black text-[10px] active:scale-90 transition-all shadow-lg backdrop-blur-md border ${btn.colorClass}`}
+                        >
+                          {btn.label}
+                        </Button>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>

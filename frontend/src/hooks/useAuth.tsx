@@ -5,6 +5,8 @@ interface User {
   id: number;
   username: string;
   email: string;
+  is_approved: boolean;
+  is_superuser: boolean;
 }
 
 export function useAuth() {
