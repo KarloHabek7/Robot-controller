@@ -76,6 +76,15 @@ def setup_tunnel():
     backend_url = None
     frontend_url = None
 
+    if TUNNEL_PROVIDER == "none":
+        print("[Tunnel] Tunnel provider disabled (using local access only).")
+        # Ensure .env.local is cleaned up if no tunnel
+        env_local = os.path.join(FRONTEND_DIR, ".env.local")
+        if os.path.exists(env_local):
+            os.remove(env_local)
+        USE_NGROK = False
+        return None, None
+
     if TUNNEL_PROVIDER == "ngrok":
         if not NGROK_AUTHTOKEN:
             print("[ngrok] No NGROK_AUTHTOKEN found. Skipping.")
@@ -149,7 +158,7 @@ def start_backend():
     cmd = [
         python_executable, "-m", "uvicorn", "backend.main:app", 
         "--reload", 
-        "--host", "127.0.0.1" if USE_NGROK else "0.0.0.0", 
+        "--host", "0.0.0.0", 
         "--port", "8000",
         "--log-level", "info"
     ]
@@ -237,11 +246,11 @@ def main():
         print(f"   - http://{ip}:8080")
     
     if frontend_tunnel:
-        print(f"   - {frontend_tunnel.public_url} (Remote w/ ngrok)")
+        print(f"   - {frontend_tunnel} (Remote w/ ngrok)")
         try:
             import qrcode
             qr = qrcode.QRCode(version=1, border=1)
-            qr.add_data(frontend_tunnel.public_url)
+            qr.add_data(frontend_tunnel)
             qr.make(fit=True)
             print("\n   Scan to open on mobile:")
             qr.print_ascii(invert=True)
