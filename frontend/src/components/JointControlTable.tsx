@@ -103,13 +103,13 @@ const JointControlTable = () => {
   };
 
   return (
-    <div className="bg-card border rounded-xl p-6 h-full flex flex-col shadow-sm">
+    <div className="bg-card border rounded-xl p-3 sm:p-6 h-full flex flex-col shadow-sm">
       {/* Header Controls */}
-      <div className="flex flex-col gap-4 mb-6">
+      <div className="flex flex-col gap-4 mb-4 sm:mb-6">
         <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-secondary/5 rounded-lg border border-border/40">
           {/* Global Increment Adjustment */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-secondary/10 rounded-full border border-border/40 pl-3 pr-1 py-0.5 gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center bg-secondary/10 rounded-full border border-border/40 pl-3 pr-1 py-0.5 gap-2 shrink-0">
               <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">
                 {t('robot.step', { unit: '°' })}
               </span>
@@ -144,11 +144,11 @@ const JointControlTable = () => {
               </div>
             </div>
 
-            <div className="h-4 w-px bg-border/40 mx-1" />
+            <div className="hidden sm:block h-4 w-px bg-border/40 mx-1" />
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Zap className={`w-3.5 h-3.5 ${directControlEnabled ? 'text-amber-500 fill-amber-500/20' : 'text-muted-foreground'}`} />
-              <Label htmlFor="direct-control" className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground cursor-pointer">
+              <Label htmlFor="direct-control" className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground cursor-pointer whitespace-nowrap">
                 {t('robot.directControl')}
               </Label>
               <Switch
@@ -167,9 +167,9 @@ const JointControlTable = () => {
               size="sm"
               onClick={handleReset}
               disabled={isMoving || isEStopActive}
-              className="gap-2 h-7 text-xs"
+              className="gap-2 h-7 px-2 text-[10px] sm:text-xs"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               {t('robot.reset')}
             </Button>
 
@@ -179,16 +179,16 @@ const JointControlTable = () => {
                 size="sm"
                 onClick={handleApply}
                 disabled={isMoving || isEStopActive}
-                className="gap-2 h-7 text-xs bg-primary hover:bg-primary/90"
+                className="gap-2 h-7 px-2 text-[10px] sm:text-xs bg-primary hover:bg-primary/90"
               >
                 {isMoving ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin" />
                     {t('robot.moving')}
                   </>
                 ) : (
                   <>
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     {t('robot.apply')}
                   </>
                 )}
@@ -199,7 +199,7 @@ const JointControlTable = () => {
       </div>
 
       {/* Joint Rows */}
-      <div className="space-y-2 overflow-y-auto flex-1 pr-1">
+      <div className="space-y-2 overflow-y-auto flex-1 pr-1 no-scrollbar">
         {jointMetadata.map((joint) => {
           const isDirty = isJointDirty(joint.id);
           const delta = getDelta(joint.id);
@@ -209,46 +209,51 @@ const JointControlTable = () => {
           return (
             <div
               key={joint.id}
-              // Reduced gap-3 to gap-2, reduced p-3 to p-2 for tighter vertical/horizontal spacing
-              className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isDirty
+              className={`flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-all ${isDirty
                 ? 'bg-primary/5 border-primary/50 shadow-sm'
                 : 'bg-secondary/10 border-border/50'
                 } ${(isMoving || isEStopActive) ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              {/* Joint Name - Compact */}
-              <div className="w-14 shrink-0">
-                <div className="text-[10px] text-muted-foreground font-mono">J{joint.id}</div>
-                <div className="text-sm font-bold text-foreground leading-tight truncate" title={t(joint.name)}>
-                  {t(joint.name)}
+              {/* Joint Name and Buttons Group - Always together */}
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                <div className="w-12 sm:w-14 shrink-0">
+                  <div className="text-[8px] sm:text-[10px] text-muted-foreground font-mono">J{joint.id}</div>
+                  <div className="text-xs sm:text-sm font-bold text-foreground leading-tight truncate px-0.5" title={t(joint.name)}>
+                    {t(joint.name)}
+                  </div>
+                </div>
+
+                <div className="flex gap-1 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    onClick={() => handleIncrement(joint.id, '-')}
+                    disabled={isMoving}
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
+                    onClick={() => handleIncrement(joint.id, '+')}
+                    disabled={isMoving}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+
+                {/* Status on mobile - moved next to name */}
+                <div className="flex sm:hidden flex-1 justify-end text-right overflow-hidden pr-1">
+                  <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight whitespace-nowrap">
+                    {t('robot.act')} <span className="text-foreground/80">{actualAngle.toFixed(1)}°</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Buttons - Circular style like TCP */}
-              <div className="flex gap-1 shrink-0">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
-                  onClick={() => handleIncrement(joint.id, '-')}
-                  disabled={isMoving}
-                  title={`-${incrementOverride}°`}
-                >
-                  <Minus className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors shrink-0"
-                  onClick={() => handleIncrement(joint.id, '+')}
-                  disabled={isMoving}
-                  title={`+${incrementOverride}°`}
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Slider - flex-1 takes all available middle space */}
-              <div className="flex-1 px-4 min-w-[60px]">
+              {/* Slider - takes available space in the middle */}
+              <div className="flex-1 px-2 sm:px-4 min-w-[120px] sm:min-w-[60px]">
                 <Slider
                   value={[targetAngle]}
                   onValueChange={(values) => handleSliderChange(joint.id, values[0])}
@@ -261,8 +266,8 @@ const JointControlTable = () => {
                 />
               </div>
 
-              {/* Right Cluster: Input and status */}
-              <div className="flex items-center gap-2 shrink-0">
+              {/* Input and status Group */}
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end sm:justify-start mt-1 sm:mt-0">
                 <div className="w-20 shrink-0">
                   <div className="flex items-center bg-background border rounded h-8 px-1 focus-within:ring-1 focus-within:ring-primary/30 transition-shadow">
                     <Input
@@ -270,13 +275,13 @@ const JointControlTable = () => {
                       value={targetAngle.toFixed(2)}
                       onChange={(e) => handleInputChange(joint.id, e.target.value)}
                       disabled={isMoving}
-                      className="border-0 p-0 h-6 text-sm text-center focus-visible:ring-0 font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="border-0 p-0 h-6 text-xs sm:text-sm text-center focus-visible:ring-0 font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     <span className="text-[10px] text-muted-foreground ml-0.5">°</span>
                   </div>
                 </div>
 
-                <div className="w-20 shrink-0 flex flex-col gap-0 justify-center text-right overflow-hidden pr-1">
+                <div className="hidden sm:flex w-20 shrink-0 flex-col gap-0 justify-center text-right overflow-hidden pr-1">
                   <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight truncate">
                     {t('robot.act')} <span className="text-foreground/80">{actualAngle.toFixed(2)}°</span>
                   </div>

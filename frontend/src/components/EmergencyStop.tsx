@@ -9,7 +9,7 @@ const HOLD_DURATION = 2000; // ms
 
 export const EmergencyStop = () => {
     const { t } = useTranslation();
-    const { isEStopActive, setEStopActive } = useRobotStore();
+    const { isEStopActive, setEStopActive, clearSafetyStatus } = useRobotStore();
     const [holdProgress, setHoldProgress] = useState(0);
     const holdTimerRef = useRef<number | null>(null);
     const startTimeRef = useRef<number>(0);
@@ -36,14 +36,14 @@ export const EmergencyStop = () => {
     }, [setEStopActive]);
 
     const handleReset = useCallback(() => {
-        setEStopActive(false);
+        clearSafetyStatus();
         setHoldProgress(0);
         toast.dismiss('e-stop-toast');
         toast.success(t('estop.reset'), {
             duration: 2000,
             icon: <RotateCcw className="h-4 w-4" />
         });
-    }, [setEStopActive]);
+    }, [clearSafetyStatus, t]);
 
     const startHolding = () => {
         if (!isEStopActive) {

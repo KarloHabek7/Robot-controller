@@ -24,23 +24,23 @@ const PositionDisplayCompact = ({ pose }: PositionDisplayCompactProps) => {
     ];
 
     return (
-        <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-2xl p-4 shadow-2xl opacity-98 pointer-events-auto h-[80px] flex items-center gap-4">
-            <div className="flex flex-col justify-center items-center gap-1.5 px-2 h-full">
-                <Target className="w-4 h-4 text-primary" />
-                <span className="text-[10px] font-black uppercase text-primary leading-none">
+        <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-xl sm:rounded-2xl p-2 sm:p-4 shadow-2xl opacity-98 pointer-events-auto h-auto sm:h-[80px] flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <div className="flex flex-col justify-center items-center gap-1 sm:gap-1.5 px-1 sm:px-2 h-full shrink-0">
+                <Target className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary leading-none">
                     TCP
                 </span>
             </div>
 
-            <div className="flex flex-col gap-1 justify-center flex-1">
+            <div className="flex flex-col gap-0.5 sm:gap-1 justify-center flex-1 min-w-0">
                 {/* Row 1: Position */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar">
                     {posCoords.map((item) => (
-                        <div key={item.label} className="flex items-baseline gap-1.5 min-w-[70px]">
-                            <span className={`text-[10px] font-black ${item.color} uppercase w-4`}>
+                        <div key={item.label} className="flex items-baseline gap-1 sm:gap-1.5 min-w-[55px] sm:min-w-[70px] shrink-0">
+                            <span className={`text-[8px] sm:text-[10px] font-black ${item.color} uppercase w-3 sm:w-4`}>
                                 {item.label}
                             </span>
-                            <span className="text-sm font-mono font-bold text-foreground tabular-nums">
+                            <span className="text-xs sm:text-sm font-mono font-bold text-foreground tabular-nums truncate">
                                 {formatCoord(item.value)}
                             </span>
                         </div>
@@ -48,13 +48,13 @@ const PositionDisplayCompact = ({ pose }: PositionDisplayCompactProps) => {
                 </div>
 
                 {/* Row 2: Rotation */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar">
                     {rotCoords.map((item) => (
-                        <div key={item.label} className="flex items-baseline gap-1.5 min-w-[70px]">
-                            <span className={`text-[10px] font-black ${item.color} uppercase w-4`}>
+                        <div key={item.label} className="flex items-baseline gap-1 sm:gap-1.5 min-w-[55px] sm:min-w-[70px] shrink-0">
+                            <span className={`text-[8px] sm:text-[10px] font-black ${item.color} uppercase w-3 sm:w-4`}>
                                 {item.label}
                             </span>
-                            <span className="text-sm font-mono font-bold text-foreground tabular-nums">
+                            <span className="text-xs sm:text-sm font-mono font-bold text-foreground tabular-nums truncate">
                                 {formatCoord(item.value)}
                             </span>
                         </div>

@@ -94,62 +94,62 @@ const RobotControl = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-[100svh] overflow-hidden bg-background">
       <Navbar />
-      <div className="flex-1 bg-background overflow-hidden p-4 flex flex-col gap-4">
+      <div className="flex-1 overflow-hidden p-2 sm:p-4 flex flex-col gap-2 sm:gap-4">
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden">
+        <main className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 overflow-hidden">
 
           {/* Left Side: Robot Workspace Card */}
-          <Card className="flex-1 flex flex-col overflow-hidden border-border/40 shadow-2xl bg-card relative">
-            <CardHeader className="py-2.5 px-6 border-b bg-muted/20 flex flex-row items-center justify-between h-14">
+          <Card className="flex-[1.2] lg:flex-1 flex flex-col overflow-hidden border-border/40 shadow-2xl bg-card relative min-h-[350px] lg:min-h-0">
+            <CardHeader className="py-2 px-4 sm:px-6 border-b bg-muted/20 flex flex-row items-center justify-between h-12 sm:h-14 shrink-0">
               <div className="flex items-center gap-2">
                 <Box className="h-4 w-4 text-primary" />
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-foreground/80">
+                <CardTitle className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-foreground/80">
                   {t('robot.workspace')}
                 </CardTitle>
               </div>
 
-              <div className="flex items-center gap-2 bg-secondary/10 rounded-lg pr-2 border border-border/20">
+              <div className="flex items-center gap-1 sm:gap-2 bg-secondary/10 rounded-lg pr-1 sm:pr-2 border border-border/20 scale-90 sm:scale-100 origin-right">
                 <SpeedControl />
               </div>
             </CardHeader>
 
-            <CardContent className="flex-1 p-0 relative group">
+            <CardContent className="flex-1 p-0 relative group min-h-0">
               <Robot3DViewer />
 
               {/* Top-Right Status Badge Overlay */}
-              <div className="absolute top-6 right-6 pointer-events-none">
-                <div className="bg-background/60 backdrop-blur-md border border-border/50 rounded-full px-3 py-1 flex items-center gap-2 shadow-lg">
-                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'}`} />
-                  <span className="text-[10px] font-black uppercase tracking-wider text-foreground/70">
+              <div className="absolute top-3 right-3 sm:top-6 sm:right-6 pointer-events-none">
+                <div className="bg-background/60 backdrop-blur-md border border-border/50 rounded-full px-2 py-0.5 sm:px-3 sm:py-1 flex items-center gap-1.5 sm:gap-2 shadow-lg">
+                  <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'}`} />
+                  <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-foreground/70 whitespace-nowrap">
                     {isConnected ? t('robot.realTimeStream') : t('robot.offline')}
                   </span>
                 </div>
               </div>
 
               {/* Bottom Overlay: TCP Info & E-Stop */}
-              <div className="absolute bottom-8 left-8 right-8 flex items-end justify-between gap-4 pointer-events-none">
-                <div className="flex items-end gap-3 pointer-events-auto">
+              <div className="absolute bottom-3 left-3 right-3 sm:bottom-8 sm:left-8 sm:right-8 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-3 sm:gap-4 pointer-events-none">
+                <div className="flex flex-col sm:flex-row items-center sm:items-end gap-2 sm:gap-3 pointer-events-auto w-full sm:w-auto">
                   <PositionDisplayCompact pose={actualTcpPose} />
 
-                  {/* TCP Preview Switcher - Vertical layout restored */}
-                  <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-2xl p-2.5 shadow-2xl h-[80px] flex flex-col justify-between min-w-[190px]">
-                    <div className="flex items-center justify-center gap-2 mt-0.5">
-                      <Target className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.15em] text-primary">
+                  {/* TCP Preview Switcher - Horizontal on mobile, vertical handle restored */}
+                  <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 shadow-2xl h-auto sm:h-[80px] flex flex-row sm:flex-col justify-between items-center sm:items-stretch gap-3 sm:gap-0 min-w-0 w-full sm:min-w-[190px]">
+                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 sm:mt-0.5 shrink-0">
+                      <Target className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
+                      <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] text-primary whitespace-nowrap">
                         {t('robot.tcpPreview')}
                       </span>
                     </div>
 
-                    <div className="flex gap-1 bg-secondary/15 p-1 rounded-xl border border-border/10">
+                    <div className="flex flex-1 gap-1 bg-secondary/15 p-1 rounded-lg sm:rounded-xl border border-border/10">
                       {(['real', 'linked', 'both'] as const).map((mode) => (
                         <button
                           key={mode}
                           onClick={() => setTCPVisualizationMode(mode)}
                           className={cn(
-                            "flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                            "flex-1 py-1 rounded-md sm:rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider transition-all",
                             tcpVisualizationMode === mode
                               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                               : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
@@ -162,7 +162,7 @@ const RobotControl = () => {
                   </div>
                 </div>
 
-                <div className="pointer-events-auto">
+                <div className="pointer-events-auto scale-75 sm:scale-100 origin-bottom sm:origin-bottom-right">
                   <EmergencyStop />
                 </div>
               </div>
@@ -171,16 +171,16 @@ const RobotControl = () => {
 
           {/* Right Side: Control Panels Card */}
           <Card className="flex-1 flex flex-col overflow-hidden border-border/40 shadow-2xl bg-card">
-            <CardHeader className="py-2.5 px-6 border-b bg-muted/20 flex flex-row items-center justify-between h-14">
+            <CardHeader className="py-2 px-4 sm:px-6 border-b bg-muted/20 flex flex-row items-center justify-between h-12 sm:h-14 shrink-0">
               <div className="flex items-center gap-2 shrink-0">
                 <Settings2 className="h-4 w-4 text-primary" />
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-foreground/80">
+                <CardTitle className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-foreground/80">
                   {t('navigation.controlInterface')}
                 </CardTitle>
               </div>
 
               <div className="flex-1 flex justify-end">
-                <div className="w-auto">
+                <div className="w-auto scale-90 sm:scale-100 origin-right">
                   <ControlModeSwitcher
                     activeMode={activeControlMode}
                     onModeChange={setActiveControlMode}
@@ -189,10 +189,10 @@ const RobotControl = () => {
               </div>
             </CardHeader>
 
-            <CardContent className="flex-1 overflow-y-auto p-0 control-panel-scroll">
-              <div className="p-6">
+            <CardContent className="flex-1 overflow-y-auto p-0 control-panel-scroll min-h-0">
+              <div className="p-3 sm:p-6">
                 {activeControlMode === 'connection' && (
-                  <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 max-w-2xl mx-auto">
+                  <div className="space-y-4 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500 max-w-2xl mx-auto">
                     <ConnectionStatus
                       isConnected={isConnected}
                       onToggleConnection={handleToggleConnection}

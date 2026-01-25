@@ -92,63 +92,70 @@ const Admin = () => {
     return (
         <div className="flex flex-col min-h-screen">
             <Navbar />
-            <div className="flex-1 container py-8 mx-auto px-4 md:px-0">
-                <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-3xl font-black uppercase tracking-widest text-foreground/80">{t('admin.dashboard')}</h1>
+            <div className="flex-1 container py-4 sm:py-8 mx-auto px-2 sm:px-4 md:px-0">
+                <div className="flex items-center justify-between mb-4 sm:mb-8">
+                    <h1 className="text-xl sm:text-3xl font-black uppercase tracking-widest text-foreground/80">{t('admin.dashboard')}</h1>
                 </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t('admin.userManagement')}</CardTitle>
+                <Card className="border-border/40 shadow-xl">
+                    <CardHeader className="p-4 sm:p-6 border-b bg-muted/20">
+                        <CardTitle className="text-sm sm:text-xl">{t('admin.userManagement')}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>{t('admin.username')}</TableHead>
-                                    <TableHead>{t('admin.email')}</TableHead>
-                                    <TableHead>{t('admin.status')}</TableHead>
-                                    <TableHead>{t('admin.role')}</TableHead>
-                                    <TableHead className="text-right">{t('admin.actions')}</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {users.map((u) => (
-                                    <TableRow key={u.id}>
-                                        <TableCell>{u.id}</TableCell>
-                                        <TableCell>{u.username}</TableCell>
-                                        <TableCell>{u.email}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={u.is_approved ? "default" : "secondary"}>
-                                                {u.is_approved ? t('admin.approved') : t('admin.pending')}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {u.is_superuser && <Badge variant="outline">{t('admin.admin')}</Badge>}
-                                        </TableCell>
-                                        <TableCell className="text-right space-x-2">
-                                            {!u.is_superuser && (
-                                                <>
-                                                    {!u.is_approved ? (
-                                                        <Button size="sm" onClick={() => handleApprove(u.id)}>
-                                                            {t('admin.approve')}
-                                                        </Button>
-                                                    ) : (
-                                                        <Button size="sm" variant="secondary" onClick={() => handleRevoke(u.id)}>
-                                                            {t('admin.revoke')}
-                                                        </Button>
-                                                    )}
-                                                    <Button size="sm" variant="destructive" onClick={() => handleDelete(u.id)}>
-                                                        {t('admin.delete')}
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </TableCell>
+                    <CardContent className="p-0 sm:p-6 sm:pt-6">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-muted/30">
+                                        <TableHead className="w-[50px]">ID</TableHead>
+                                        <TableHead>{t('admin.username')}</TableHead>
+                                        <TableHead className="hidden sm:table-cell">{t('admin.email')}</TableHead>
+                                        <TableHead>{t('admin.status')}</TableHead>
+                                        <TableHead className="hidden md:table-cell">{t('admin.role')}</TableHead>
+                                        <TableHead className="text-right">{t('admin.actions')}</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {users.map((u) => (
+                                        <TableRow key={u.id} className="hover:bg-muted/10 transition-colors">
+                                            <TableCell className="font-mono text-xs">{u.id}</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-sm">{u.username}</span>
+                                                    <span className="text-[10px] text-muted-foreground sm:hidden">{u.email}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="hidden sm:table-cell text-sm">{u.email}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={u.is_approved ? "default" : "secondary"} className="text-[10px] uppercase font-bold px-1.5 py-0">
+                                                    {u.is_approved ? t('admin.approved') : t('admin.pending')}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="hidden md:table-cell">
+                                                {u.is_superuser && <Badge variant="outline" className="text-[10px] uppercase font-bold">{t('admin.admin')}</Badge>}
+                                            </TableCell>
+                                            <TableCell className="text-right whitespace-nowrap">
+                                                {!u.is_superuser && (
+                                                    <div className="flex justify-end gap-1 sm:gap-2">
+                                                        {!u.is_approved ? (
+                                                            <Button size="sm" onClick={() => handleApprove(u.id)} className="h-8 px-2 text-[10px] sm:text-xs">
+                                                                {t('admin.approve')}
+                                                            </Button>
+                                                        ) : (
+                                                            <Button size="sm" variant="secondary" onClick={() => handleRevoke(u.id)} className="h-8 px-2 text-[10px] sm:text-xs">
+                                                                {t('admin.revoke')}
+                                                            </Button>
+                                                        )}
+                                                        <Button size="sm" variant="destructive" onClick={() => handleDelete(u.id)} className="h-8 px-2 text-[10px] sm:text-xs">
+                                                            {t('admin.delete')}
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

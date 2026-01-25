@@ -51,9 +51,9 @@ export const SpeedControl = () => {
     };
 
     return (
-        <div className="flex items-center gap-2 px-2 py-1">
-            <div className="flex items-center gap-1.5 text-muted-foreground mr-1">
-                <Gauge className="h-3.5 w-3.5 text-primary" />
+        <div className="flex items-center gap-1 sm:gap-2 px-1 sm:px-2 py-0.5 sm:py-1">
+            <div className="flex items-center gap-1 sm:gap-1.5 text-muted-foreground mr-0.5 sm:mr-1">
+                <Gauge className="h-3 w-3 sm:h-3.5 sm:h-3.5 text-primary" />
                 <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">{t('robot.speed')}</span>
             </div>
 
@@ -64,10 +64,10 @@ export const SpeedControl = () => {
                 onValueChange={handleSpeedChange}
                 onValueCommit={handleSpeedCommit}
                 disabled={!isConnected}
-                className="w-64"
+                className="w-[80px] sm:w-48 md:w-64"
             />
 
-            <div className="text-[11px] font-mono font-bold w-10 text-right text-primary">
+            <div className="text-[10px] sm:text-[11px] font-mono font-bold w-7 sm:w-10 text-right text-primary">
                 {localValue}%
             </div>
         </div>

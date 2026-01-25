@@ -280,6 +280,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   clearSafetyStatus: () => {
     set((state) => ({
       isMoving: false,
+      isEStopActive: false, // Force clear the E-Stop latch
       isTargetDirty: false,
       targetJoints: [...state.actualJoints],
       targetTcpPose: [...state.actualTcpPose],
@@ -296,11 +297,15 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       // Convert speed from 0.0-1.0 (robot) to 0-100 (UI)
       const robotSpeedValue = speed !== undefined ? Math.round(speed * 100) : state.robotSpeed;
 
-      const newSafetyMode = safetyMode !== undefined ? safetyMode : state.safetyMode;
-      const newRobotMode = robotMode !== undefined ? robotMode : state.robotMode;
+      const nextRobotMode = robotMode !== undefined ? robotMode : state.robotMode;
+      const nextSafetyMode = safetyMode !== undefined ? safetyMode : state.safetyMode;
 
-      // Update E-Stop based on safety mode
-      const isEStopActiveFromSafety = newSafetyMode === 7 || newSafetyMode === 3 || newSafetyMode === 4; // Emergency or Protective Stop
+      // Hardware is in a stop state if safety mode is 3 (Protective), 4 (Recovery), 6 (System E-Stop), or 7 (Robot E-Stop)
+      const hardwareStopDetected = nextSafetyMode === 3 || nextSafetyMode === 4 || nextSafetyMode === 6 || nextSafetyMode === 7;
+
+      // SOFTWARE LATCH: We only set isEStopActive to TRUE if hardware says so.
+      // We NEVER set it to false via sync - it must be reset via UI (manual hold) or clearSafetyStatus.
+      const nextEStopActive = hardwareStopDetected ? true : state.isEStopActive;
 
       // 1. Ghost Sync on Connect/Idle: If strictly clean and not moving, follow the robot.
       if (!state.isTargetDirty && !state.isMoving) {
@@ -311,9 +316,9 @@ export const useRobotStore = create<RobotState>((set, get) => ({
           targetJoints: joints,
           targetTcpPose: tcpPose,
           robotSpeed: robotSpeedValue,
-          safetyMode: newSafetyMode,
-          robotMode: newRobotMode,
-          isEStopActive: isEStopActiveFromSafety,
+          safetyMode: nextSafetyMode,
+          robotMode: nextRobotMode,
+          isEStopActive: nextEStopActive,
           isTargetDirty: false,
           isMoving: false
         };
@@ -346,9 +351,9 @@ export const useRobotStore = create<RobotState>((set, get) => ({
             targetJoints: syncJoints ? joints : state.targetJoints,
             targetTcpPose: syncTcp ? tcpPose : state.targetTcpPose,
             robotSpeed: robotSpeedValue,
-            safetyMode: newSafetyMode,
-            robotMode: newRobotMode,
-            isEStopActive: isEStopActiveFromSafety,
+            safetyMode: nextSafetyMode,
+            robotMode: nextRobotMode,
+            isEStopActive: nextEStopActive,
             isTargetDirty: false,
             isMoving: false,
             movementProgress: 100
@@ -364,9 +369,9 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         actualTcpPose: tcpPose,
         actualTcpOffset: tcpOffset,
         robotSpeed: robotSpeedValue,
-        safetyMode: newSafetyMode,
-        robotMode: newRobotMode,
-        isEStopActive: isEStopActiveFromSafety,
+        safetyMode: nextSafetyMode,
+        robotMode: nextRobotMode,
+        isEStopActive: nextEStopActive,
         isTargetDirty: isDirty,
       };
     });

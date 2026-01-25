@@ -12,20 +12,24 @@ BACKEND_DIR = "backend"
 FRONTEND_DIR = "frontend"
 VENV_DIR = ".venv"
 REQUIREMENTS_FILE = os.path.join(BACKEND_DIR, "requirements.txt")
-NGROK_AUTHTOKEN = os.environ.get("NGROK_AUTHTOKEN")
+# Tunnel Configuration
+TUNNEL_PROVIDER = os.environ.get("TUNNEL_PROVIDER", "ngrok").lower()
 
-# Try to load from .env file if NGROK_AUTHTOKEN is not in environment
-if not NGROK_AUTHTOKEN and os.path.exists(".env"):
+# Try to load from .env file
+if os.path.exists(".env"):
     with open(".env", "r") as f:
         for line in f:
-            if line.startswith("NGROK_AUTHTOKEN="):
+            if line.startswith("TUNNEL_PROVIDER="):
+                TUNNEL_PROVIDER = line.split("=", 1)[1].strip().strip('"').strip("'").lower()
+            elif line.startswith("NGROK_AUTHTOKEN="):
                 NGROK_AUTHTOKEN = line.split("=", 1)[1].strip().strip('"').strip("'")
-                break
 
-if NGROK_AUTHTOKEN:
-    print(f"[Config] NGROK_AUTHTOKEN loaded (starts with {NGROK_AUTHTOKEN[:5]}...)")
-else:
-    print("[Config] No NGROK_AUTHTOKEN found in environment or .env")
+print(f"[Config] Tunnel provider: {TUNNEL_PROVIDER}")
+if TUNNEL_PROVIDER == "ngrok":
+    if NGROK_AUTHTOKEN:
+        print(f"[Config] NGROK_AUTHTOKEN loaded (starts with {NGROK_AUTHTOKEN[:5]}...)")
+    else:
+        print("[Config] No NGROK_AUTHTOKEN found for ngrok.")
 
 def is_windows():
     return platform.system().lower() == "windows"
@@ -53,43 +57,88 @@ def setup_frontend():
     # Using shell=True for windows npm compatibility if not in path as executable
     subprocess.check_call(["npm", "install"], cwd=FRONTEND_DIR, shell=is_windows())
 
-def setup_ngrok():
-    global USE_NGROK
-    if not NGROK_AUTHTOKEN:
-        print("[ngrok] No NGROK_AUTHTOKEN found. Skipping trusted tunnels (will use local IP).")
-        # Ensure .env.local is cleaned up if no ngrok
-        env_local = os.path.join(FRONTEND_DIR, ".env.local")
-        if os.path.exists(env_local):
-            os.remove(env_local)
-        return None, None
+def get_tunnel_url(process, provider):
+    """Wait for tunnel process to output the public URL."""
+    start_time = time.time()
+    url = None
+    while time.time() - start_time < 15: # 15s timeout
+        line = process.stdout.readline()
+        if not line:
+            break
+        line_str = line.decode('utf-8', errors='ignore').strip()
+        if "your url is:" in line_str.lower():
+            url = line_str.split("is:")[1].strip()
+            break
+    return url
 
-    try:
-        from pyngrok import ngrok
-        print("[ngrok] Setting up tunnels...")
-        ngrok.set_auth_token(NGROK_AUTHTOKEN)
-        
-        # Backend tunnel
-        backend_tunnel = ngrok.connect("127.0.0.1:8000", "http")
-        print(f"[ngrok] Backend tunnel: {backend_tunnel.public_url}")
-        
-        # Frontend tunnel
-        frontend_tunnel = ngrok.connect("127.0.0.1:8080", "http")
-        print(f"[ngrok] Frontend tunnel: {frontend_tunnel.public_url}")
-        
+def setup_tunnel():
+    global USE_NGROK
+    backend_url = None
+    frontend_url = None
+
+    if TUNNEL_PROVIDER == "ngrok":
+        if not NGROK_AUTHTOKEN:
+            print("[ngrok] No NGROK_AUTHTOKEN found. Skipping.")
+            return None, None
+        try:
+            from pyngrok import ngrok
+            print("[ngrok] Setting up tunnels...")
+            ngrok.set_auth_token(NGROK_AUTHTOKEN)
+            
+            # Backend tunnel
+            backend_tunnel = ngrok.connect("127.0.0.1:8000", "http")
+            print(f"[ngrok] Backend tunnel: {backend_tunnel.public_url}")
+            
+            # Frontend tunnel
+            frontend_tunnel = ngrok.connect("127.0.0.1:8080", "http")
+            print(f"[ngrok] Frontend tunnel: {frontend_tunnel.public_url}")
+            
+            USE_NGROK = True
+            backend_url = backend_tunnel.public_url
+            frontend_url = frontend_tunnel.public_url
+        except Exception as e:
+            print(f"[ngrok] Error: {e}")
+            return None, None
+
+    elif TUNNEL_PROVIDER == "localtunnel":
+        print("[localtunnel] Setting up tunnels via npx...")
+        try:
+            # Backend tunnel
+            cmd_back = ["npx", "lt", "--port", "8000"]
+            p_back = subprocess.Popen(cmd_back, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=is_windows())
+            backend_url = get_tunnel_url(p_back, "localtunnel")
+            processes.append(p_back)
+            
+            if backend_url:
+                print(f"[localtunnel] Backend tunnel: {backend_url}")
+            else:
+                print("[localtunnel] Failed to get backend URL.")
+                return None, None
+
+            # Frontend tunnel
+            cmd_front = ["npx", "lt", "--port", "8080"]
+            p_front = subprocess.Popen(cmd_front, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=is_windows())
+            frontend_url = get_tunnel_url(p_front, "localtunnel")
+            processes.append(p_front)
+
+            if frontend_url:
+                print(f"[localtunnel] Frontend tunnel: {frontend_url}")
+            else:
+                print("[localtunnel] Failed to get frontend URL.")
+                return None, None
+            
+            USE_NGROK = True # We use the same flag for 'using a tunnel' logic
+        except Exception as e:
+            print(f"[localtunnel] Error: {e}")
+            return None, None
+
+    if backend_url:
         # Write backend URL to frontend .env.local
         with open(os.path.join(FRONTEND_DIR, ".env.local"), "w") as f:
-            f.write(f"VITE_API_BASE_URL={backend_tunnel.public_url}\n")
-        
-        USE_NGROK = True
-        return backend_tunnel, frontend_tunnel
-    except ImportError:
-        print("[ngrok] pyngrok not installed yet. Skipping setup.")
-        USE_NGROK = False
-        return None, None
-    except Exception as e:
-        print(f"[ngrok] Error setting up tunnels: {e}")
-        USE_NGROK = False
-        return None, None
+            f.write(f"VITE_API_BASE_URL={backend_url}\n")
+        return backend_url, frontend_url
+
+    return None, None
 
 USE_NGROK = False
 processes = []
@@ -157,7 +206,7 @@ def main():
     try:
         setup_venv()
         setup_frontend()
-        tunnels = setup_ngrok()
+        tunnels = setup_tunnel()
     except Exception as e:
         print(f"[Error] Setup failed: {e}")
         sys.exit(1)
