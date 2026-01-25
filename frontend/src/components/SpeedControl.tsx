@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Gauge } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { useTranslation } from "react-i18next";
 import { useRobotStore } from '@/stores/robotStore';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
 
 export const SpeedControl = () => {
+    const { t } = useTranslation();
     const robotSpeed = useRobotStore((state) => state.robotSpeed);
     const setRobotSpeed = useRobotStore((state) => state.setRobotSpeed);
     const isConnected = useRobotStore((state) => state.isConnected);
@@ -44,7 +46,7 @@ export const SpeedControl = () => {
             await api.setRobotSpeed(vals[0] / 100);
         } catch (error) {
             console.error("Failed to set speed:", error);
-            toast.error("Failed to set robot speed");
+            toast.error(t('errors.failedToSetSpeed'));
         }
     };
 
@@ -52,7 +54,7 @@ export const SpeedControl = () => {
         <div className="flex items-center gap-2 px-2 py-1">
             <div className="flex items-center gap-1.5 text-muted-foreground mr-1">
                 <Gauge className="h-3.5 w-3.5 text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Speed</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">{t('robot.speed')}</span>
             </div>
 
             <Slider

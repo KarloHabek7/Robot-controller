@@ -1,26 +1,29 @@
 import { useState, useEffect } from 'react';
 import { api, getToken, removeToken } from '@/services/api';
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  is_approved: boolean;
-  is_superuser: boolean;
-}
+import { useAuthStore } from '@/stores/authStore';
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, setUser, logout } = useAuthStore();
+  const [loading, setLoading] = useState(!user);
 
   useEffect(() => {
     checkAuth();
+
+    // Set up a poll to check auth status every 10 seconds if user is not approved
+    const interval = setInterval(() => {
+      if (getToken()) {
+        checkAuth(true); // silent check
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = async (silent = false) => {
     const token = getToken();
     if (!token) {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      setUser(null);
       return;
     }
 
@@ -29,16 +32,14 @@ export function useAuth() {
       setUser(currentUser);
     } catch (error) {
       console.error('Auth check failed:', error);
-      removeToken();
-      setUser(null);
+      logout();
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   const signOut = () => {
-    removeToken();
-    setUser(null);
+    logout();
   };
 
   return {
@@ -46,5 +47,6 @@ export function useAuth() {
     loading,
     signOut,
     isAuthenticated: !!user,
+    checkAuth
   };
 }

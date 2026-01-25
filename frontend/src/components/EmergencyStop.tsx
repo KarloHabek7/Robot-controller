@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Power, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from "react-i18next";
 import { useRobotStore } from '@/stores/robotStore';
 import { cn } from '@/lib/utils';
 
 const HOLD_DURATION = 2000; // ms
 
 export const EmergencyStop = () => {
+    const { t } = useTranslation();
     const { isEStopActive, setEStopActive } = useRobotStore();
     const [holdProgress, setHoldProgress] = useState(0);
     const holdTimerRef = useRef<number | null>(null);
@@ -20,7 +22,7 @@ export const EmergencyStop = () => {
             console.error("Failed to send emergency stop:", error);
         }
 
-        toast.error("EMERGENCY STOP ACTIVATED", {
+        toast.error(t('estop.activated'), {
             duration: null,
             id: 'e-stop-toast',
             style: {
@@ -37,7 +39,7 @@ export const EmergencyStop = () => {
         setEStopActive(false);
         setHoldProgress(0);
         toast.dismiss('e-stop-toast');
-        toast.success("SYSTEM RESET", {
+        toast.success(t('estop.reset'), {
             duration: 2000,
             icon: <RotateCcw className="h-4 w-4" />
         });
@@ -89,8 +91,8 @@ export const EmergencyStop = () => {
 
                 {/* Housing labels - Both stacked at the bottom */}
                 <div className="absolute bottom-1.5 flex flex-col items-center leading-tight pointer-events-none z-0">
-                    <span className="text-[8px] font-black text-[#78350f] uppercase tracking-[0.2em] opacity-80">Emergency</span>
-                    <span className="text-[8px] font-black text-[#78350f] uppercase tracking-[0.2em] opacity-80">Stop</span>
+                    <span className="text-[8px] font-black text-[#78350f] uppercase tracking-[0.2em] opacity-80">{t('estop.emergency')}</span>
+                    <span className="text-[8px] font-black text-[#78350f] uppercase tracking-[0.2em] opacity-80">{t('estop.stopLabel')}</span>
                 </div>
 
                 {/* Progress Ring for Reset - Starting from top (12 o'clock) and traveling CCW */}
@@ -153,12 +155,12 @@ export const EmergencyStop = () => {
                                 // Reversed spin animation using style
                                 holdProgress > 0 ? "animate-[spin_1s_linear_infinite_reverse]" : "opacity-80"
                             )} />
-                            <span className="text-[7px] font-black tracking-tighter">HOLD TO RESET</span>
+                            <span className="text-[7px] font-black tracking-tighter">{t('estop.holdToReset')}</span>
                         </div>
                     ) : (
                         <div className="flex flex-col items-center">
                             <Power className="h-6 w-6 mb-1 drop-shadow-lg" />
-                            <span className="text-[9px] font-black tracking-[0.2em] leading-none">STOP</span>
+                            <span className="text-[9px] font-black tracking-[0.2em] leading-none">{t('estop.stop')}</span>
                         </div>
                     )}
 

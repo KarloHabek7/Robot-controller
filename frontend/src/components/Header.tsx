@@ -30,7 +30,7 @@ export function Header() {
                             {t('auth.title')}
                         </h1>
                         <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em] hidden sm:block">
-                            Industrial Control Interface v1.0
+                            {t('common.version')}
                         </span>
                     </div>
                 </div>

@@ -90,16 +90,16 @@ const JointControlTable = () => {
   const handleApply = async () => {
     try {
       await commitTargetJoints();
-      toast.success(t('robot.movingToTarget') || 'Moving to target position...');
+      toast.success(t('robot.movingToTarget'));
     } catch (error) {
-      toast.error(t('errors.commandFailed') || 'Failed to send movement command');
+      toast.error(t('errors.commandFailed'));
     }
   };
 
   // Reset handler
   const handleReset = () => {
     resetTargetToActual();
-    toast.info(t('robot.targetReset') || 'Target reset to actual position');
+    toast.info(t('robot.targetReset'));
   };
 
   return (
@@ -114,7 +114,9 @@ const JointControlTable = () => {
           {/* Global Increment Adjustment */}
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-secondary/10 rounded-full border border-border/40 pl-3 pr-1 py-0.5 gap-2">
-              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">Step (°)</span>
+              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">
+                {t('robot.step', { unit: '°' })}
+              </span>
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
@@ -220,8 +222,8 @@ const JointControlTable = () => {
               {/* Joint Name - Compact */}
               <div className="w-14 shrink-0">
                 <div className="text-[10px] text-muted-foreground font-mono">J{joint.id}</div>
-                <div className="text-sm font-bold text-foreground leading-tight truncate" title={joint.name}>
-                  {joint.name}
+                <div className="text-sm font-bold text-foreground leading-tight truncate" title={t(joint.name)}>
+                  {t(joint.name)}
                 </div>
               </div>
 
@@ -280,11 +282,11 @@ const JointControlTable = () => {
 
                 <div className="w-20 shrink-0 flex flex-col gap-0 justify-center text-right overflow-hidden pr-1">
                   <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight truncate">
-                    Act: <span className="text-foreground/80">{actualAngle.toFixed(2)}°</span>
+                    {t('robot.act')} <span className="text-foreground/80">{actualAngle.toFixed(2)}°</span>
                   </div>
                   {isDirty && (
                     <div className="text-[9px] font-bold font-mono text-primary leading-tight truncate">
-                      Δ {delta > 0 ? '+' : ''}{delta.toFixed(2)}°
+                      {t('robot.delta')} {delta > 0 ? '+' : ''}{delta.toFixed(2)}°
                     </div>
                   )}
                 </div>

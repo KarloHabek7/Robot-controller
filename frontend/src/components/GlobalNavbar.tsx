@@ -1,6 +1,7 @@
 import { useRobotStore } from '@/stores/robotStore';
 import { SpeedControl } from './SpeedControl';
 import ConnectionStatus from './ConnectionStatus';
+import { useTranslation } from "react-i18next";
 import { api } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -11,6 +12,7 @@ export const GlobalNavbar = () => {
         host,
         port,
     } = useRobotStore();
+    const { t } = useTranslation();
 
     const handleToggleConnection = async () => {
         const newStatus = !isConnected;
@@ -22,18 +24,18 @@ export const GlobalNavbar = () => {
                     // Fetch full status to get capability flags (like speed control support)
                     const status = await api.getRobotStatus();
                     setConnectionStatus(status.connected, status.host, status.port, status.speed_control_supported);
-                    toast.success("Connected to robot!");
+                    toast.success(t('auth.loginSuccess'));
                 }
             } catch (error) {
-                toast.error("Connection failed");
+                toast.error(t('errors.connectionFailed'));
             }
         } else {
             try {
                 await api.disconnectRobot();
                 setConnectionStatus(false);
-                toast.info("Disconnected from robot");
+                toast.info(t('robot.disconnected'));
             } catch (error) {
-                toast.error("Disconnection failed");
+                toast.error(t('errors.commandFailed'));
             }
         }
     };
@@ -47,7 +49,7 @@ export const GlobalNavbar = () => {
                 </div>
                 <div>
                     <h1 className="text-lg font-black tracking-tight leading-none text-foreground/90 uppercase">
-                        UR5 Controller
+                        {t('auth.title').split(' ').slice(0, 2).join(' ')} Controller
                     </h1>
                     <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5 opacity-70">
                         Universal Robots Interface

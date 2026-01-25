@@ -11,9 +11,9 @@ import { toast } from 'sonner';
 import { Loader2, Rocket } from 'lucide-react';
 import { z } from 'zod';
 
-const usernameSchema = z.string().min(3, 'Username must be at least 3 characters');
-const emailSchema = z.string().email('Invalid email address');
-const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
+const usernameSchema = (t: any) => z.string().min(3, t('auth.usernameTooShort'));
+const emailSchema = (t: any) => z.string().email(t('auth.invalidEmail'));
+const passwordSchema = (t: any) => z.string().min(6, t('auth.passwordTooShort'));
 
 export default function Auth() {
   const { t } = useTranslation();
@@ -52,8 +52,8 @@ export default function Auth() {
     e.preventDefault();
 
     try {
-      usernameSchema.parse(loginUsername);
-      passwordSchema.parse(loginPassword);
+      usernameSchema(t).parse(loginUsername);
+      passwordSchema(t).parse(loginPassword);
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -79,9 +79,9 @@ export default function Auth() {
     e.preventDefault();
 
     try {
-      usernameSchema.parse(signupUsername);
-      emailSchema.parse(signupEmail);
-      passwordSchema.parse(signupPassword);
+      usernameSchema(t).parse(signupUsername);
+      emailSchema(t).parse(signupEmail);
+      passwordSchema(t).parse(signupPassword);
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -143,7 +143,7 @@ export default function Auth() {
                   <Input
                     id="login-username"
                     type="text"
-                    placeholder="username"
+                    placeholder={t('auth.username')}
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
                     required
@@ -188,7 +188,7 @@ export default function Auth() {
                   <Input
                     id="signup-username"
                     type="text"
-                    placeholder="username"
+                    placeholder={t('auth.username')}
                     value={signupUsername}
                     onChange={(e) => setSignupUsername(e.target.value)}
                     required
@@ -201,7 +201,7 @@ export default function Auth() {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="user@example.com"
+                    placeholder={t('auth.email')}
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     required

@@ -14,7 +14,12 @@
         "logout": "Logout",
         "loginSuccess": "Logged in successfully",
         "registrationSuccess": "Account created successfully!",
-        "invalidCredentials": "Invalid username or password"
+        "invalidCredentials": "Invalid username or password",
+        "usernameTooShort": "Username must be at least 3 characters",
+        "invalidEmail": "Invalid email address",
+        "passwordTooShort": "Password must be at least 6 characters",
+        "pendingApprovalTitle": "Account Pending Approval",
+        "pendingApprovalDesc": "Your account is currently waiting for administrator approval. Please check back later or contact the system administrator."
     },
     "robot": {
         "control": "Robot Control",
@@ -44,7 +49,32 @@
         "ready": "Robot is ready",
         "base": "Base",
         "tool": "Tool",
-        "relative": "Relative"
+        "relative": "Relative",
+        "step": "Step ({{unit}})",
+        "act": "Act:",
+        "delta": "Δ",
+        "movingToTarget": "Moving to target position...",
+        "movingToTargetTcp": "Moving to target TCP position...",
+        "targetReset": "Target reset to actual position",
+        "direct": "Direct",
+        "manufacturer": "Manufacturer",
+        "model": "Model",
+        "dof": "DOF",
+        "type": "Type",
+        "cobot": "Cobot",
+        "speed": "Speed",
+        "workspace": "Robot Workspace",
+        "realTimeStream": "Real-time Stream",
+        "offline": "Offline",
+        "tcpPreview": "TCP Preview",
+        "joints": {
+            "base": "Base",
+            "shoulder": "Shoulder",
+            "elbow": "Elbow",
+            "wrist1": "Wrist 1",
+            "wrist2": "Wrist 2",
+            "wrist3": "Wrist 3"
+        }
     },
     "controls": {
         "joint": "Joint {{number}}",
@@ -62,7 +92,23 @@
         "stop": "Stop Program",
         "programName": "Program Name",
         "running": "Running",
-        "stopped": "Stopped"
+        "stopped": "Stopped",
+        "paused": "Paused",
+        "selectProgram": "Select a program",
+        "refreshPrograms": "Refresh Programs",
+        "noProgramsFound": "No programs found (check FTP)",
+        "resume": "Resume",
+        "pause": "Pause"
+    },
+    "commands": {
+        "quickCommands": "Quick Commands",
+        "urScript": "URScript / Command",
+        "send": "SEND",
+        "tip": "Tip: Press Ctrl+Enter to send quickly.",
+        "history": "History",
+        "noCommands": "No commands sent yet",
+        "success": "Success",
+        "failed": "Failed to send command"
     },
     "logs": {
         "commandLog": "Command Log",
@@ -83,14 +129,27 @@
         "edit": "Edit",
         "close": "Close",
         "reset": "Reset",
-        "apply": "Apply"
+        "apply": "Apply",
+        "returnHome": "Return to Home",
+        "refresh": "Refresh",
+        "version": "Industrial Control Interface v1.0"
     },
     "errors": {
         "connectionFailed": "Failed to connect to robot",
         "commandFailed": "Command execution failed",
         "notConnected": "Not connected to robot",
         "invalidInput": "Invalid input",
-        "unknownError": "An unknown error occurred"
+        "unknownError": "An unknown error occurred",
+        "failedToSetSpeed": "Failed to set robot speed",
+        "fetchFailed": "Failed to fetch programs via FTP. Check connection."
+    },
+    "estop": {
+        "activated": "EMERGENCY STOP ACTIVATED",
+        "reset": "SYSTEM RESET",
+        "holdToReset": "HOLD TO RESET",
+        "stop": "STOP",
+        "emergency": "Emergency",
+        "stopLabel": "Stop"
     },
     "theme": {
         "light": "Light Mode",
@@ -106,5 +165,37 @@
         "title": "Application Settings",
         "theme": "Theme",
         "language": "Language"
+    },
+    "navigation": {
+        "controlInterface": "Control Interface",
+        "connectionSettings": "Connection\n& Settings",
+        "jointControl": "Joint\nControl",
+        "tcpControl": "TCP\nControl",
+        "commands": "Commands",
+        "programs": "Programs",
+        "notFound": "Oops! Page not found"
+    },
+    "admin": {
+        "dashboard": "Admin Dashboard",
+        "userManagement": "User Management",
+        "username": "Username",
+        "email": "Email",
+        "status": "Status",
+        "role": "Role",
+        "actions": "Actions",
+        "approved": "Approved",
+        "pending": "Pending",
+        "admin": "Admin",
+        "approve": "Approve",
+        "revoke": "Revoke",
+        "delete": "Delete",
+        "confirmDelete": "Are you sure you want to delete this user?",
+        "userApproved": "User approved",
+        "userRevoked": "User access revoked",
+        "userDeleted": "User deleted",
+        "failedToApprove": "Failed to approve user",
+        "failedToRevoke": "Failed to revoke user",
+        "failedToDelete": "Failed to delete user",
+        "failedToFetch": "Failed to fetch users"
     }
 }

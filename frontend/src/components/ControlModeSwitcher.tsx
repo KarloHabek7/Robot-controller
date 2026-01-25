@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sliders, Move3d, Wifi, Terminal, Play } from 'lucide-react';
+import { useTranslation } from "react-i18next";
 import { ControlMode, useRobotStore } from '@/stores/robotStore';
 import { cn } from '@/lib/utils';
 
@@ -9,15 +10,16 @@ interface ControlModeSwitcherProps {
     onModeChange: (mode: ControlMode) => void;
 }
 
-const MODES: { value: ControlMode; label: string; icon: React.ElementType }[] = [
-    { value: 'connection', label: 'Connection\n& Settings', icon: Wifi },
-    { value: 'joint', label: 'Joint\nControl', icon: Sliders },
-    { value: 'tcp', label: 'TCP\nControl', icon: Move3d },
-    { value: 'commands', label: 'Commands', icon: Terminal },
-    { value: 'programs', label: 'Programs', icon: Play },
+const MODES: { value: ControlMode; labelKey: string; icon: React.ElementType }[] = [
+    { value: 'connection', labelKey: 'navigation.connectionSettings', icon: Wifi },
+    { value: 'joint', labelKey: 'navigation.jointControl', icon: Sliders },
+    { value: 'tcp', labelKey: 'navigation.tcpControl', icon: Move3d },
+    { value: 'commands', labelKey: 'navigation.commands', icon: Terminal },
+    { value: 'programs', labelKey: 'navigation.programs', icon: Play },
 ];
 
 export const ControlModeSwitcher = ({ activeMode, onModeChange }: ControlModeSwitcherProps) => {
+    const { t } = useTranslation();
     const { isConnected } = useRobotStore();
 
     return (
@@ -44,7 +46,7 @@ export const ControlModeSwitcher = ({ activeMode, onModeChange }: ControlModeSwi
                             </div>
 
                             <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline-block leading-[1.1] text-left whitespace-pre-line">
-                                {mode.label}
+                                {t(mode.labelKey)}
                             </span>
                         </TabsTrigger>
                     );

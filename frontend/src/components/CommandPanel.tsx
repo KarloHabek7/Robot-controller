@@ -44,7 +44,7 @@ const CommandPanel = () => {
       const response = await api.sendRawCommand(cmdToSend.trim());
       setCommandHistory(prev => prev.map(entry =>
         entry.id === entryId
-          ? { ...entry, status: 'success', response: (response as any).command || 'Success' }
+          ? { ...entry, status: 'success', response: (response as any).command || t('commands.success') }
           : entry
       ));
       if (!cmdToOverride) setCommand('');
@@ -52,10 +52,10 @@ const CommandPanel = () => {
     } catch (error: any) {
       setCommandHistory(prev => prev.map(entry =>
         entry.id === entryId
-          ? { ...entry, status: 'error', response: error.message || 'Failed to send' }
+          ? { ...entry, status: 'error', response: error.message || t('commands.failed') }
           : entry
       ));
-      toast.error(error.message || 'Failed to send command');
+      toast.error(error.message || t('commands.failed'));
     } finally {
       setIsSending(false);
     }
@@ -99,7 +99,7 @@ const CommandPanel = () => {
       <div className="space-y-4">
         {/* Quick Commands */}
         <div>
-          <Label className="text-[10px] text-muted-foreground mb-2 block uppercase tracking-tight">Quick Commands</Label>
+          <Label className="text-[10px] text-muted-foreground mb-2 block uppercase tracking-tight">{t('commands.quickCommands')}</Label>
           <div className="flex flex-wrap gap-2">
             {quickCommands.map((cmd) => (
               <Button
@@ -120,7 +120,7 @@ const CommandPanel = () => {
 
         {/* Command Input */}
         <div className="space-y-2">
-          <Label className="text-[10px] text-muted-foreground uppercase tracking-tight">URScript / Command</Label>
+          <Label className="text-[10px] text-muted-foreground uppercase tracking-tight">{t('commands.urScript')}</Label>
           <div className="flex gap-2">
             <Textarea
               value={command}
@@ -143,22 +143,22 @@ const CommandPanel = () => {
               ) : (
                 <Send className="w-5 h-5" />
               )}
-              <span className="text-[10px] font-bold">SEND</span>
+              <span className="text-[10px] font-bold">{t('commands.send')}</span>
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground italic">
-            Tip: Press Ctrl+Enter to send quickly.
+            {t('commands.tip')}
           </p>
         </div>
 
         {/* Command History */}
         <div>
-          <Label className="text-[10px] text-muted-foreground mb-2 block uppercase tracking-tight font-bold">History</Label>
+          <Label className="text-[10px] text-muted-foreground mb-2 block uppercase tracking-tight font-bold">{t('commands.history')}</Label>
           <ScrollArea className="h-[220px] rounded-lg border bg-secondary/10">
             <div className="p-3 space-y-2">
               {commandHistory.length === 0 ? (
                 <div className="text-center text-muted-foreground text-xs py-12 italic">
-                  No commands sent yet
+                  {t('commands.noCommands')}
                 </div>
               ) : (
                 commandHistory.map((entry) => (

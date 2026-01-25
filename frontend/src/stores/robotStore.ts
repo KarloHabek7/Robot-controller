@@ -159,12 +159,12 @@ export const useRobotStore = create<RobotState>((set, get) => ({
 
   // Joint metadata
   jointMetadata: [
-    { id: 1, name: 'Base', min: -360, max: 360, defaultIncrement: 5 },
-    { id: 2, name: 'Shoulder', min: -360, max: 360, defaultIncrement: 5 },
-    { id: 3, name: 'Elbow', min: -360, max: 360, defaultIncrement: 5 },
-    { id: 4, name: 'Wrist 1', min: -360, max: 360, defaultIncrement: 5 },
-    { id: 5, name: 'Wrist 2', min: -360, max: 360, defaultIncrement: 10 },
-    { id: 6, name: 'Wrist 3', min: -360, max: 360, defaultIncrement: 10 },
+    { id: 1, name: 'robot.joints.base', min: -360, max: 360, defaultIncrement: 5 },
+    { id: 2, name: 'robot.joints.shoulder', min: -360, max: 360, defaultIncrement: 5 },
+    { id: 3, name: 'robot.joints.elbow', min: -360, max: 360, defaultIncrement: 5 },
+    { id: 4, name: 'robot.joints.wrist1', min: -360, max: 360, defaultIncrement: 5 },
+    { id: 5, name: 'robot.joints.wrist2', min: -360, max: 360, defaultIncrement: 10 },
+    { id: 6, name: 'robot.joints.wrist3', min: -360, max: 360, defaultIncrement: 10 },
   ],
 
   // Connection state

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
     Table,
@@ -28,6 +29,7 @@ const Admin = () => {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const { user, signOut } = useAuth();
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -39,13 +41,13 @@ const Admin = () => {
             // We need to implement this endpoint in api.ts as well
             // For now assuming we can fetch using a fetch call or adding to api service
             // Let's assume we will add getUsers to api service
-            const response = await api.get<User[]>('/admin/users');
+            const response = await api.get<User[]>('/api/admin/users');
             setUsers(response);
         } catch (error) {
             console.error("Failed to fetch users", error);
             toast({
-                title: "Error",
-                description: "Failed to fetch users",
+                title: t('common.error'),
+                description: t('admin.failedToFetch'),
                 variant: "destructive",
             });
         } finally {
@@ -55,61 +57,61 @@ const Admin = () => {
 
     const handleApprove = async (userId: number) => {
         try {
-            await api.post(`/admin/users/${userId}/approve`, {});
-            toast({ title: "Success", description: "User approved" });
+            await api.post(`/api/admin/users/${userId}/approve`, {});
+            toast({ title: t('common.success'), description: t('admin.userApproved') });
             fetchUsers();
         } catch (error) {
-            toast({ title: "Error", description: "Failed to approve user", variant: "destructive" });
+            toast({ title: t('common.error'), description: t('admin.failedToApprove'), variant: "destructive" });
         }
     };
 
     const handleRevoke = async (userId: number) => {
         try {
-            await api.post(`/admin/users/${userId}/revoke`, {});
-            toast({ title: "Success", description: "User access revoked" });
+            await api.post(`/api/admin/users/${userId}/revoke`, {});
+            toast({ title: t('common.success'), description: t('admin.userRevoked') });
             fetchUsers();
         } catch (error) {
-            toast({ title: "Error", description: "Failed to revoke user", variant: "destructive" });
+            toast({ title: t('common.error'), description: t('admin.failedToRevoke'), variant: "destructive" });
         }
     };
 
     const handleDelete = async (userId: number) => {
-        if (!confirm("Are you sure you want to delete this user?")) return;
+        if (!confirm(t('admin.confirmDelete'))) return;
         try {
-            await api.delete(`/admin/users/${userId}`);
-            toast({ title: "Success", description: "User deleted" });
+            await api.delete(`/api/admin/users/${userId}`);
+            toast({ title: t('common.success'), description: t('admin.userDeleted') });
             fetchUsers();
         } catch (error) {
-            toast({ title: "Error", description: "Failed to delete user", variant: "destructive" });
+            toast({ title: t('common.error'), description: t('admin.failedToDelete'), variant: "destructive" });
         }
     };
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return <div className="flex items-center justify-center min-h-screen">{t('common.loading')}</div>;
 
     return (
         <div className="container py-8 mx-auto">
             <div className="flex items-center justify-between mb-8">
-                <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+                <h1 className="text-3xl font-bold">{t('admin.dashboard')}</h1>
                 <div className="space-x-4">
-                    <Button variant="outline" onClick={() => navigate("/")}>Robot Control</Button>
-                    <Button variant="destructive" onClick={signOut}>Sign Out</Button>
+                    <Button variant="outline" onClick={() => navigate("/")}>{t('robot.control')}</Button>
+                    <Button variant="destructive" onClick={signOut}>{t('auth.logout')}</Button>
                 </div>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>User Management</CardTitle>
+                    <CardTitle>{t('admin.userManagement')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>ID</TableHead>
-                                <TableHead>Username</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                <TableHead>{t('admin.username')}</TableHead>
+                                <TableHead>{t('admin.email')}</TableHead>
+                                <TableHead>{t('admin.status')}</TableHead>
+                                <TableHead>{t('admin.role')}</TableHead>
+                                <TableHead className="text-right">{t('admin.actions')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -120,26 +122,26 @@ const Admin = () => {
                                     <TableCell>{u.email}</TableCell>
                                     <TableCell>
                                         <Badge variant={u.is_approved ? "default" : "secondary"}>
-                                            {u.is_approved ? "Approved" : "Pending"}
+                                            {u.is_approved ? t('admin.approved') : t('admin.pending')}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
-                                        {u.is_superuser && <Badge variant="outline">Admin</Badge>}
+                                        {u.is_superuser && <Badge variant="outline">{t('admin.admin')}</Badge>}
                                     </TableCell>
                                     <TableCell className="text-right space-x-2">
                                         {!u.is_superuser && (
                                             <>
                                                 {!u.is_approved ? (
                                                     <Button size="sm" onClick={() => handleApprove(u.id)}>
-                                                        Approve
+                                                        {t('admin.approve')}
                                                     </Button>
                                                 ) : (
                                                     <Button size="sm" variant="secondary" onClick={() => handleRevoke(u.id)}>
-                                                        Revoke
+                                                        {t('admin.revoke')}
                                                     </Button>
                                                 )}
                                                 <Button size="sm" variant="destructive" onClick={() => handleDelete(u.id)}>
-                                                    Delete
+                                                    {t('admin.delete')}
                                                 </Button>
                                             </>
                                         )}

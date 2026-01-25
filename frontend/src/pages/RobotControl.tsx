@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { toast } from 'sonner';
+import { useTranslation } from "react-i18next";
 import Robot3DViewer from '@/components/Robot3DViewer';
 import JointControlTable from '@/components/JointControlTable';
 import RobotConfiguration from '@/components/RobotConfiguration';
@@ -30,6 +31,7 @@ const RobotControl = () => {
     tcpVisualizationMode,
     setTCPVisualizationMode
   } = useRobotStore();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -67,18 +69,18 @@ const RobotControl = () => {
         const result = await api.connectRobot(host || "192.168.15.130", port || 30002);
         if (result.success) {
           setConnectionStatus(true, host, port);
-          toast.success("Connected to robot!");
+          toast.success(t('auth.loginSuccess'));
         }
       } catch (error) {
-        toast.error("Connection failed");
+        toast.error(t('errors.connectionFailed'));
       }
     } else {
       try {
         await api.disconnectRobot();
         setConnectionStatus(false);
-        toast.info("Disconnected from robot");
+        toast.info(t('robot.disconnected'));
       } catch (error) {
-        toast.error("Disconnection failed");
+        toast.error(t('errors.commandFailed'));
       }
     }
   };
@@ -95,7 +97,7 @@ const RobotControl = () => {
             <div className="flex items-center gap-2">
               <Box className="h-4 w-4 text-primary" />
               <CardTitle className="text-xs font-black uppercase tracking-widest text-foreground/80">
-                Robot Workspace
+                {t('robot.workspace')}
               </CardTitle>
             </div>
 
@@ -112,7 +114,7 @@ const RobotControl = () => {
               <div className="bg-background/60 backdrop-blur-md border border-border/50 rounded-full px-3 py-1 flex items-center gap-2 shadow-lg">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'}`} />
                 <span className="text-[10px] font-black uppercase tracking-wider text-foreground/70">
-                  {isConnected ? 'Real-time Stream' : 'Offline'}
+                  {isConnected ? t('robot.realTimeStream') : t('robot.offline')}
                 </span>
               </div>
             </div>
@@ -127,7 +129,7 @@ const RobotControl = () => {
                   <div className="flex items-center justify-center gap-2 mt-0.5">
                     <Target className="w-3.5 h-3.5 text-primary" />
                     <span className="text-[10px] font-black uppercase tracking-[0.15em] text-primary">
-                      TCP Preview
+                      {t('robot.tcpPreview')}
                     </span>
                   </div>
 
@@ -163,7 +165,7 @@ const RobotControl = () => {
             <div className="flex items-center gap-2 shrink-0">
               <Settings2 className="h-4 w-4 text-primary" />
               <CardTitle className="text-xs font-black uppercase tracking-widest text-foreground/80">
-                Control Interface
+                {t('navigation.controlInterface')}
               </CardTitle>
             </div>
 

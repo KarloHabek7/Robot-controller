@@ -158,20 +158,20 @@ const RobotConfiguration = ({ host, port, onChange }: RobotConfigurationProps) =
         {/* Robot Info Section */}
         <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/10 rounded-xl border border-border/50">
           <div className="space-y-0.5">
-            <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Manufacturer</div>
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">{t('robot.manufacturer')}</div>
             <div className="text-xs font-black text-foreground italic decoration-primary/30 underline decoration-2 underline-offset-4">Universal Robots</div>
           </div>
           <div className="space-y-0.5">
-            <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Model</div>
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">{t('robot.model')}</div>
             <div className="text-xs font-black text-foreground italic decoration-primary/30 underline decoration-2 underline-offset-4">UR5</div>
           </div>
           <div className="space-y-0.5">
-            <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">DOF</div>
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">{t('robot.dof')}</div>
             <div className="text-xs font-black text-foreground italic decoration-primary/30 underline decoration-2 underline-offset-4">6</div>
           </div>
           <div className="space-y-0.5">
-            <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Type</div>
-            <div className="text-xs font-black text-foreground italic decoration-primary/30 underline decoration-2 underline-offset-4">Cobot</div>
+            <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">{t('robot.type')}</div>
+            <div className="text-xs font-black text-foreground italic decoration-primary/30 underline decoration-2 underline-offset-4">{t('robot.cobot')}</div>
           </div>
         </div>
       </div>

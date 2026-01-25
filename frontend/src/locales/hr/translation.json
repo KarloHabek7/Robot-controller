@@ -14,7 +14,12 @@
         "logout": "Odjava",
         "loginSuccess": "Uspješno prijavljeni",
         "registrationSuccess": "Račun uspješno stvoren!",
-        "invalidCredentials": "Neispravno korisničko ime ili lozinka"
+        "invalidCredentials": "Neispravno korisničko ime ili lozinka",
+        "usernameTooShort": "Korisničko ime mora imati najmanje 3 znaka",
+        "invalidEmail": "Neispravna e-pošta",
+        "passwordTooShort": "Lozinka mora imati najmanje 6 znakova",
+        "pendingApprovalTitle": "Račun čeka na odobrenje",
+        "pendingApprovalDesc": "Vaš račun trenutno čeka na odobrenje administratora. Molimo provjerite kasnije ili kontaktirajte sistemskog administratora."
     },
     "robot": {
         "control": "Upravljanje Robotom",
@@ -44,7 +49,32 @@
         "ready": "Robot je spreman",
         "base": "Baza",
         "tool": "Alat",
-        "relative": "Relativno"
+        "relative": "Relativno",
+        "step": "Pomak ({{unit}})",
+        "act": "Akt:",
+        "delta": "Δ",
+        "movingToTarget": "Pomicanje na ciljnu poziciju...",
+        "movingToTargetTcp": "Pomicanje na ciljnu TCP poziciju...",
+        "targetReset": "Ciljna pozicija resetirana na stvarnu",
+        "direct": "Izravno",
+        "manufacturer": "Proizvođač",
+        "model": "Model",
+        "dof": "DOF",
+        "type": "Tip",
+        "cobot": "Cobot",
+        "speed": "Brzina",
+        "workspace": "Radni prostor robota",
+        "realTimeStream": "Stream u stvarnom vremenu",
+        "offline": "Offline",
+        "tcpPreview": "TCP Pregled",
+        "joints": {
+            "base": "Baza",
+            "shoulder": "Rame",
+            "elbow": "Lakat",
+            "wrist1": "Zglob 1",
+            "wrist2": "Zglob 2",
+            "wrist3": "Zglob 3"
+        }
     },
     "controls": {
         "joint": "Zglob {{number}}",
@@ -62,7 +92,23 @@
         "stop": "Zaustavi Program",
         "programName": "Naziv Programa",
         "running": "U izvođenju",
-        "stopped": "Zaustavljeno"
+        "stopped": "Zaustavljeno",
+        "paused": "Pauzirano",
+        "selectProgram": "Odaberite program",
+        "refreshPrograms": "Osvježi Programe",
+        "noProgramsFound": "Nema programa (provjerite FTP)",
+        "resume": "Nastavi",
+        "pause": "Pauziraj"
+    },
+    "commands": {
+        "quickCommands": "Brze Naredbe",
+        "urScript": "URScript / Naredba",
+        "send": "POŠALJI",
+        "tip": "Savjet: Pritisnite Ctrl+Enter za brzo slanje.",
+        "history": "Povijest",
+        "noCommands": "Nema poslanih naredbi",
+        "success": "Uspjeh",
+        "failed": "Slanje naredbe nije uspjelo"
     },
     "logs": {
         "commandLog": "Dnevnik Naredbi",
@@ -83,14 +129,27 @@
         "edit": "Uredi",
         "close": "Zatvori",
         "reset": "Resetiraj",
-        "apply": "Primijeni"
+        "apply": "Primijeni",
+        "returnHome": "Vrati se na početnu",
+        "refresh": "Osvježi",
+        "version": "Industrijsko Kontrolno Sučelje v1.0"
     },
     "errors": {
         "connectionFailed": "Neuspješno povezivanje na robot",
         "commandFailed": "Izvršavanje naredbe nije uspjelo",
         "notConnected": "Niste povezani na robot",
         "invalidInput": "Neispravan unos",
-        "unknownError": "Došlo je do nepoznate greške"
+        "unknownError": "Došlo je do nepoznate greške",
+        "failedToSetSpeed": "Postavljanje brzine nije uspjelo",
+        "fetchFailed": "Dohvaćanje programa putem FTP-a nije uspjelo. Provjerite vezu."
+    },
+    "estop": {
+        "activated": "HITNO ZAUSTAVLJANJE AKTIVIRANO",
+        "reset": "SUSTAV RESETIRAN",
+        "holdToReset": "DRŽITE ZA RESET",
+        "stop": "STOP",
+        "emergency": "Hitno",
+        "stopLabel": "Zaustavljanje"
     },
     "theme": {
         "light": "Svijetli Način",
@@ -106,5 +165,37 @@
         "title": "Postavke Aplikacije",
         "theme": "Tema",
         "language": "Jezik"
+    },
+    "navigation": {
+        "controlInterface": "Kontrolno Sučelje",
+        "connectionSettings": "Veza i\nPostavke",
+        "jointControl": "Upravljanje\nZglobovima",
+        "tcpControl": "TCP\nUpravljanje",
+        "commands": "Naredbe",
+        "programs": "Programi",
+        "notFound": "Ups! Stranica nije pronađena"
+    },
+    "admin": {
+        "dashboard": "Admin Nadzorna Ploča",
+        "userManagement": "Upravljanje Korisnicima",
+        "username": "Korisničko ime",
+        "email": "E-pošta",
+        "status": "Status",
+        "role": "Uloga",
+        "actions": "Akcije",
+        "approved": "Odobren",
+        "pending": "Na čekanju",
+        "admin": "Admin",
+        "approve": "Odobri",
+        "revoke": "Opozovi",
+        "delete": "Obriši",
+        "confirmDelete": "Jeste li sigurni da želite obrisati ovog korisnika?",
+        "userApproved": "Korisnik odobren",
+        "userRevoked": "Pristup korisniku opozvan",
+        "userDeleted": "Korisnik obrisan",
+        "failedToApprove": "Odobravanje korisnika nije uspjelo",
+        "failedToRevoke": "Opoziv korisnika nije uspjelo",
+        "failedToDelete": "Brisanje korisnika nije uspjelo",
+        "failedToFetch": "Dohvaćanje korisnika nije uspjelo"
     }
 }

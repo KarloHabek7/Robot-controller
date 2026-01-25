@@ -222,16 +222,16 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
     if (!isTargetDirty || isMoving) return;
     try {
       await commitTargetTcp();
-      toast.success(t('robot.movingToTarget') || 'Moving to target TCP position...');
+      toast.success(t('robot.movingToTargetTcp'));
     } catch (error) {
-      toast.error(t('errors.commandFailed') || 'Failed to send TCP movement command');
+      toast.error(t('errors.commandFailed'));
     }
   };
 
   // Reset Changes
   const handleReset = () => {
     resetTargetToActual();
-    toast.info(t('robot.targetReset') || 'Target reset to actual position');
+    toast.info(t('robot.targetReset'));
   };
 
   // --- Render Helpers ---
@@ -299,11 +299,11 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
           {/* Status Display - Adjusted width for longer values */}
           <div className="w-[66px] flex flex-col gap-0 justify-center text-right overflow-hidden shrink-0 pr-1">
             <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight truncate">
-              Act: <span className="text-foreground/80">{fmt(actual)}</span>
+              {t('robot.act')} <span className="text-foreground/80">{fmt(actual)}</span>
             </div>
             {isDirty && (
               <div className="text-[9px] font-bold font-mono text-primary leading-tight truncate">
-                Δ {diff > 0 ? '+' : ''}{fmt(diff)}
+                {t('robot.delta')} {diff > 0 ? '+' : ''}{fmt(diff)}
               </div>
             )}
           </div>
@@ -367,7 +367,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             <Zap className={`w-3.5 h-3.5 shrink-0 ${directControlEnabled ? 'text-amber-500 fill-amber-500/20' : 'text-muted-foreground'}`} />
             <Label htmlFor="direct-control-tcp" className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground cursor-pointer leading-[1.1]">
               <span className="hidden sm:inline">{t('robot.directControl')}</span>
-              <span className="sm:hidden">Direct</span>
+              <span className="sm:hidden">{t('robot.direct')}</span>
             </Label>
             <Switch
               id="direct-control-tcp"
@@ -426,7 +426,9 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             </h3>
             {/* Step Control */}
             <div className="flex items-center bg-secondary/20 rounded-full border border-border/40 pl-3 pr-1 py-0.5 gap-2">
-              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">Step (mm)</span>
+              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">
+                {t('robot.step', { unit: 'mm' })}
+              </span>
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
@@ -549,7 +551,9 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             </h3>
             {/* Step Control */}
             <div className="flex items-center bg-secondary/20 rounded-full border border-border/40 pl-3 pr-1 py-0.5 gap-2">
-              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">Step (°)</span>
+              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">
+                {t('robot.step', { unit: '°' })}
+              </span>
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"

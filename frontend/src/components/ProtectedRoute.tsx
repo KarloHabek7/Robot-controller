@@ -36,7 +36,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   // If user is accessing admin page but is not superuser
-  if (location.pathname === '/admin' && !user.is_superuser) {
+  if (window.location.pathname === '/admin' && !user.is_superuser) {
     return <Navigate to="/" />;
   }
 

@@ -26,7 +26,7 @@ const ProgramControl = () => {
         console.warn("No programs found on robot");
       }
     } catch (error) {
-      toast.error(t('errors.fetchFailed') || "Failed to fetch programs via FTP. Check connection.");
+      toast.error(t('errors.fetchFailed'));
     } finally {
       setIsFetching(false);
     }
@@ -59,7 +59,7 @@ const ProgramControl = () => {
     try {
       await api.pauseProgram();
       setStatus('paused');
-      toast.info(t('programs.paused') || "Program paused");
+      toast.info(t('programs.paused'));
     } catch (error) {
       toast.error(t('errors.commandFailed'));
     } finally {
@@ -92,7 +92,7 @@ const ProgramControl = () => {
           className="h-6 w-6"
           onClick={fetchPrograms}
           disabled={isFetching}
-          title="Refresh Programs"
+          title={t('programs.refreshPrograms')}
         >
           <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
         </Button>
@@ -107,12 +107,12 @@ const ProgramControl = () => {
             disabled={status !== 'stopped' || isLoading}
           >
             <SelectTrigger className="mt-1 h-9 text-sm">
-              <SelectValue placeholder={t('programs.selectProgram') || "Select a program"} />
+              <SelectValue placeholder={t('programs.selectProgram')} />
             </SelectTrigger>
             <SelectContent>
               {programs.length === 0 ? (
                 <div className="p-2 text-xs text-muted-foreground text-center">
-                  {isFetching ? "Loading..." : "No programs found (check FTP)"}
+                  {isFetching ? t('common.loading') : t('programs.noProgramsFound')}
                 </div>
               ) : (
                 programs.map((prog) => (
@@ -136,7 +136,7 @@ const ProgramControl = () => {
               )} />
               <span className="text-xs font-semibold capitalize">
                 {status === 'running' ? t('programs.running') :
-                  status === 'paused' ? (t('programs.paused') || 'Paused') :
+                  status === 'paused' ? t('programs.paused') :
                     t('programs.stopped')}
               </span>
             </div>
@@ -151,7 +151,7 @@ const ProgramControl = () => {
             className="h-9 font-bold col-span-1"
           >
             <Play className="h-4 w-4 mr-1" />
-            {status === 'paused' ? (t('programs.resume') || 'Resume') : t('programs.start')}
+            {status === 'paused' ? t('programs.resume') : t('programs.start')}
           </Button>
 
           <Button
@@ -162,7 +162,7 @@ const ProgramControl = () => {
             className="h-9 font-bold col-span-1"
           >
             <Pause className="h-4 w-4 mr-1" />
-            {t('programs.pause') || 'Pause'}
+            {t('programs.pause')}
           </Button>
 
           <Button
