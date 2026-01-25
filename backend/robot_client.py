@@ -429,11 +429,12 @@ class RobotTCPClient:
                         "timestamp": datetime.now().isoformat()
                     }
                     
-                    if packet_count % 125 == 0:
-                        if self.rtde_connected:
-                            print(f"[RobotClient] Update [RTDE]: J1={q_actual[0]:.2f}, Speed={speed_slider*100:.1f}%")
-                        else:
-                            print(f"[RobotClient] Update: J1={q_actual[0]:.2f}, TCPz={tcp_actual[2]:.2f}")
+                    # if packet_count % 125 == 0:
+                    #     if self.rtde_connected:
+                    #         print(f"[RobotClient] Update [RTDE]: J1={q_actual[0]:.2f}, Speed={speed_slider*100:.1f}%")
+                    #     else:
+                    #         print(f"[RobotClient] Update: J1={q_actual[0]:.2f}, TCPz={tcp_actual[2]:.2f}")
+
                 
                 await asyncio.sleep(0)
             except Exception as e:

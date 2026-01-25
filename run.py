@@ -189,7 +189,17 @@ def main():
     
     if frontend_tunnel:
         print(f"   - {frontend_tunnel.public_url} (Remote w/ ngrok)")
+        try:
+            import qrcode
+            qr = qrcode.QRCode(version=1, border=1)
+            qr.add_data(frontend_tunnel.public_url)
+            qr.make(fit=True)
+            print("\n   Scan to open on mobile:")
+            qr.print_ascii(invert=True)
+        except ImportError:
+            pass
     print("="*50 + "\n")
+
 
     target_url = "http://localhost:8080"
     for ip in local_ips:
