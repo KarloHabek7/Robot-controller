@@ -33,7 +33,7 @@ const IsometricAxes: React.FC<IsometricAxesProps> = ({ opacity = 1 }) => {
                         strokeLinecap="round"
                     />
                     <path
-                        d={`M -5 ${-scale + 5} L 0 ${-scale} L 5 ${-scale + 5}`}
+                        d={`M -8.66 ${-scale + 5} L 0 ${-scale} L 8.66 ${-scale + 5}`}
                         stroke="#3b82f6"
                         strokeWidth="3"
                         strokeLinecap="round"
@@ -51,7 +51,7 @@ const IsometricAxes: React.FC<IsometricAxesProps> = ({ opacity = 1 }) => {
                         strokeLinecap="round"
                     />
                     <path
-                        d={`M ${-scale * 0.866 + 8} ${scale * 0.5 - 2} L ${-scale * 0.866} ${scale * 0.5} L ${-scale * 0.866 + 2} ${scale * 0.5 - 8}`}
+                        d={`M ${-scale * 0.866 + 8.66} ${scale * 0.5 + 5} L ${-scale * 0.866} ${scale * 0.5} L ${-scale * 0.866} ${scale * 0.5 - 10}`}
                         stroke="#ef4444"
                         strokeWidth="3"
                         strokeLinecap="round"
@@ -69,7 +69,7 @@ const IsometricAxes: React.FC<IsometricAxesProps> = ({ opacity = 1 }) => {
                         strokeLinecap="round"
                     />
                     <path
-                        d={`M ${scale * 0.866 - 8} ${scale * 0.5 - 2} L ${scale * 0.866} ${scale * 0.5} L ${scale * 0.866 - 2} ${scale * 0.5 - 8}`}
+                        d={`M ${scale * 0.866 - 8.66} ${scale * 0.5 + 5} L ${scale * 0.866} ${scale * 0.5} L ${scale * 0.866} ${scale * 0.5 - 10}`}
                         stroke="#10b981"
                         strokeWidth="3"
                         strokeLinecap="round"

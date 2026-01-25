@@ -165,9 +165,17 @@ def main():
     print("\n=== Starting Services ===\n")
 
     # 2. Run Phase (Non-blocking with Popen)
+    print("\n[Orchestrator] Starting Backend...")
     start_backend()
-    time.sleep(2) # Give backend a moment
+    
+    print("[Orchestrator] Waiting for backend to initialize...")
+    time.sleep(3) # Give backend a moment
+    
+    print("[Orchestrator] Starting Frontend...")
     start_frontend()
+    
+    print("[Orchestrator] Waiting for frontend to initialize...")
+    time.sleep(2)
 
     # 3. Open Browser Phase
     backend_tunnel, frontend_tunnel = tunnels
@@ -179,30 +187,28 @@ def main():
     for ip in local_ips:
         print(f"   - http://{ip}:8080")
     
-    if backend_tunnel:
-         # Just showing frontend tunnel if available
-         pass
     if frontend_tunnel:
         print(f"   - {frontend_tunnel.public_url} (Remote w/ ngrok)")
     print("="*50 + "\n")
 
-    # Pick the first non-localhost IP if available, else localhost
-    target_ip = "localhost"
+    target_url = "http://localhost:8080"
     for ip in local_ips:
         if ip != "localhost":
-            target_ip = ip
+            target_url = f"http://{ip}:8080"
             break
-            
-    target_url = f"http://{target_ip}:8080"
 
-    print(f"[Ready] Attempting to open browser at {target_url} in 3 seconds...")
+    print(f"[Ready] Attempting to open browser at {target_url} in 2 seconds...")
     
     def open_browser():
-        time.sleep(3)
-        print(f"[Ready] Opening {target_url}")
-        webbrowser.open(target_url)
+        time.sleep(2)
+        try:
+            webbrowser.open(target_url)
+        except:
+            pass
 
     threading.Thread(target=open_browser, daemon=True).start()
+
+    print("\n[Monitor] Press Ctrl+C to shut down all services safely.\n")
 
     try:
         # Keep main thread alive and monitor processes
@@ -211,22 +217,38 @@ def main():
             # Check if any process died unexpectedly
             for p in processes:
                 if p.poll() is not None:
-                    print(f"[Monitor] A process exited with code {p.returncode}. Shutting down...")
+                    print(f"\n[Monitor] A service (PID {p.pid}) exited with code {p.returncode}. Shutting down...")
                     raise KeyboardInterrupt
     except KeyboardInterrupt:
-        print("\n[Stop] Shutting down...")
+        print("\n[Stop] Shutting down gracefully...")
         for p in processes:
-            # Polite terminate
-            p.terminate()
+            try:
+                # Polite terminate
+                if is_windows():
+                    # On Windows, p.terminate() is same as p.kill() for non-GUI processes
+                    # We try to be polite but Windows is Windows
+                    p.terminate()
+                else:
+                    p.terminate()
+            except:
+                pass
         
-        # Give them a moment
-        time.sleep(1)
+        # Give them a moment to cleanup
+        try:
+            time.sleep(1)
+        except KeyboardInterrupt:
+            # If user presses Ctrl+C again during shutdown, move straight to kill
+            pass
         
         for p in processes:
             if p.poll() is None:
-                # Force kill
-                p.kill()
+                try:
+                    # Force kill if still alive
+                    p.kill()
+                except:
+                    pass
         
+        print("[Stop] Cleanup complete. Goodbye.")
         sys.exit(0)
 
 if __name__ == "__main__":

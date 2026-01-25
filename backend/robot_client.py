@@ -43,66 +43,73 @@ class RobotTCPClient:
     RTDE_CONTROL_PACKAGE_PAUSE = 8
 
     async def connect(self, host: str, port: int) -> bool:
-        """Connect to the UR5 robot controller."""
+        """Connect to the UR5 robot controller with timeouts."""
         try:
-            # Command connection (usually 30002)
-            self.reader, self.writer = await asyncio.open_connection(host, port)
+            # 1. Primary command connection (usually 30002)
+            print(f"[RobotClient] Connecting to {host}:{port}...")
+            self.reader, self.writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port), 
+                timeout=3.0
+            )
             self.connected = True
+            self.host = host
+            self.port = port
             
-            # Feedback connection (always 30003 for real-time)
+            # 2. Feedback connection (port 30003)
             try:
-                self.feedback_reader, self.feedback_writer = await asyncio.open_connection(host, 30003)
+                self.feedback_reader, self.feedback_writer = await asyncio.wait_for(
+                    asyncio.open_connection(host, 30003), 
+                    timeout=2.0
+                )
                 self.feedback_connected = True
-                print(f"[RobotClient] Feedback connected to {host}:30003")
+                print(f"[RobotClient] Feedback connected on {host}:30003")
             except Exception as fe:
-                print(f"[RobotClient] Feedback connection failed: {fe}")
+                print(f"[RobotClient] Feedback connection skipped/failed: {fe}")
                 self.feedback_connected = False
 
-            # Dashboard connection (always 29999)
+            # 3. Dashboard connection (port 29999)
             try:
-                self.dashboard_reader, self.dashboard_writer = await asyncio.open_connection(host, 29999)
+                self.dashboard_reader, self.dashboard_writer = await asyncio.wait_for(
+                    asyncio.open_connection(host, 29999), 
+                    timeout=2.0
+                )
                 self.dashboard_connected = True
-                print(f"[RobotClient] Dashboard connected to {host}:29999")
+                print(f"[RobotClient] Dashboard connected on {host}:29999")
             except Exception as de:
-                print(f"[RobotClient] Dashboard connection failed: {de}")
+                print(f"[RobotClient] Dashboard connection skipped/failed: {de}")
                 self.dashboard_connected = False
 
-            # RTDE connection (Port 30004)
+            # 4. RTDE connection (Port 30004)
             try:
-                self.rtde_reader, self.rtde_writer = await asyncio.open_connection(host, 30004)
-                print(f"[RobotClient] RTDE socket connected to {host}:30004")
-                if await self._rtde_handshake():
+                self.rtde_reader, self.rtde_writer = await asyncio.wait_for(
+                    asyncio.open_connection(host, 30004), 
+                    timeout=2.0
+                )
+                print(f"[RobotClient] RTDE socket connected on {host}:30004")
+                if await asyncio.wait_for(self._rtde_handshake(), timeout=5.0):
                     self.rtde_connected = True
-                    print(f"[RobotClient] RTDE fully synchronized on {host}:30004")
+                    print(f"[RobotClient] RTDE fully synchronized")
                 else:
                     print("[RobotClient] RTDE handshake failed")
                     self.rtde_connected = False
-                    # Close the connection if handshake failed
                     if self.rtde_writer:
                         self.rtde_writer.close()
-                        await self.rtde_writer.wait_closed()
-                    self.rtde_reader = None
-                    self.rtde_writer = None
             except Exception as re:
-                print(f"[RobotClient] RTDE connection failed: {re}")
+                print(f"[RobotClient] RTDE connection skipped/failed: {re}")
                 self.rtde_connected = False
 
-            self.host = host
-            self.port = port
-            print(f"[RobotClient] Connected to {host}:{port}")
-
-            # Start feedback listener task
+            # Start listener tasks
             if self.feedback_connected:
                 self.feedback_task = asyncio.create_task(self._feedback_listener())
-
-            # Start RTDE listener if connected
             if self.rtde_connected:
                 self.rtde_task = asyncio.create_task(self._rtde_listener())
-                print("[RobotClient] RTDE listener started")
-            else:
-                print("[RobotClient] RTDE not available, using URScript for speed control")
 
+            print(f"[RobotClient] Fully connected to {host}")
             return True
+        except asyncio.TimeoutError:
+            print(f"[RobotClient] Connection to {host}:{port} timed out")
+            self.connected = False
+            return False
         except Exception as e:
             print(f"[RobotClient] Connection failed: {e}")
             self.connected = False
@@ -184,7 +191,6 @@ class RobotTCPClient:
     async def send_dashboard_command(self, command: str) -> Optional[str]:
         """Send a command to the Dashboard Server (port 29999) and return response."""
         if not self.dashboard_connected or not self.dashboard_writer or not self.dashboard_reader:
-            print("[RobotClient] Dashboard not connected")
             return None
         
         try:
@@ -192,13 +198,16 @@ class RobotTCPClient:
             self.dashboard_writer.write(cmd.encode())
             await self.dashboard_writer.drain()
             
-            # Dashboard server always responds with a status message ending in \n
-            response = await self.dashboard_reader.readuntil(b'\n')
+            # Use wait_for to prevent hanging on dashboard response
+            response = await asyncio.wait_for(
+                self.dashboard_reader.readuntil(b'\n'),
+                timeout=2.0
+            )
             resp_text = response.decode().strip()
-            print(f"[RobotClient] Dashboard command: '{command}' -> Result: '{resp_text}'")
+            print(f"[RobotClient] Dashboard: '{command}' -> '{resp_text}'")
             return resp_text
         except Exception as e:
-            print(f"[RobotClient] Dashboard command failed: {e}")
+            print(f"[RobotClient] Dashboard command '{command}' failed: {e}")
             self.dashboard_connected = False
             return None
 
@@ -297,10 +306,16 @@ class RobotTCPClient:
 
     async def _read_rtde_package(self) -> tuple[int, int, bytes]:
         if not self.rtde_reader: return 0, 0, b""
-        header = await self.rtde_reader.readexactly(3)
-        length, p_type = struct.unpack(">HB", header)
-        payload = await self.rtde_reader.readexactly(length - 3)
-        return length, p_type, payload
+        try:
+            # Read header with timeout
+            header = await asyncio.wait_for(self.rtde_reader.readexactly(3), timeout=1.0)
+            length, p_type = struct.unpack(">HB", header)
+            
+            # Read payload with timeout
+            payload = await asyncio.wait_for(self.rtde_reader.readexactly(length - 3), timeout=1.0)
+            return length, p_type, payload
+        except (asyncio.TimeoutError, asyncio.IncompleteReadError):
+            return 0, 0, b""
 
     # Added instance variable to store TCP offset from RTDE
     rtde_tcp_offset = [0.0] * 6

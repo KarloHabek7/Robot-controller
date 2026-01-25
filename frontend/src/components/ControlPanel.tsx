@@ -424,7 +424,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             </div>
 
             {/* Bottom Row: Controls (Refined Isometric Layout) */}
-            <div className="flex-1 min-h-[340px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden">
+            <div className="flex-1 min-h-[260px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden">
 
               {/* Central Visualization */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -434,7 +434,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
               </div>
 
               {/* Z Controls (Flanking Top) */}
-              <div className="absolute top-[62px] left-1/2 -translate-x-[calc(50%+44px)] z-10">
+              <div className="absolute top-[22px] left-1/2 -translate-x-[calc(50%+44px)] z-10">
                 <Button
                   onClick={() => handleJog(2, -1)}
                   disabled={isMoving}
@@ -444,7 +444,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
                   -Z
                 </Button>
               </div>
-              <div className="absolute top-[62px] left-1/2 -translate-x-[calc(50%-44px)] z-10">
+              <div className="absolute top-[22px] left-1/2 -translate-x-[calc(50%-44px)] z-10">
                 <Button
                   onClick={() => handleJog(2, 1)}
                   disabled={isMoving}
@@ -456,7 +456,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
               </div>
 
               {/* X Controls (Flanking Left Down) */}
-              <div className="absolute bottom-[148px] left-8 z-10">
+              <div className="absolute bottom-[108px] left-8 z-10">
                 <Button
                   onClick={() => handleJog(0, -1)}
                   disabled={isMoving}
@@ -466,7 +466,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
                   -X
                 </Button>
               </div>
-              <div className="absolute bottom-[68px] left-20 z-10">
+              <div className="absolute bottom-[28px] left-20 z-10">
                 <Button
                   onClick={() => handleJog(0, 1)}
                   disabled={isMoving}
@@ -478,7 +478,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
               </div>
 
               {/* Y Controls (Flanking Right Down) */}
-              <div className="absolute bottom-[148px] right-8 z-10">
+              <div className="absolute bottom-[108px] right-8 z-10">
                 <Button
                   onClick={() => handleJog(1, -1)}
                   disabled={isMoving}
@@ -488,7 +488,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
                   -Y
                 </Button>
               </div>
-              <div className="absolute bottom-[68px] right-20 z-10">
+              <div className="absolute bottom-[28px] right-20 z-10">
                 <Button
                   onClick={() => handleJog(1, 1)}
                   disabled={isMoving}
@@ -554,7 +554,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             </div>
 
             {/* Bottom Row: Rotation (Refined Isometric Layout) */}
-            <div className="flex-1 min-h-[340px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden">
+            <div className="flex-1 min-h-[260px] relative bg-secondary/5 rounded-2xl border border-white/5 overflow-hidden">
 
               {/* Central Visualization */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -564,7 +564,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
               </div>
 
               {/* RZ Controls (Flanking Top) */}
-              <div className="absolute top-[62px] left-1/2 -translate-x-[calc(50%+44px)] z-10">
+              <div className="absolute top-[22px] left-1/2 -translate-x-[calc(50%+44px)] z-10">
                 <Button
                   onClick={() => handleJog(5, -1)}
                   disabled={isMoving}
@@ -574,7 +574,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
                   -RZ
                 </Button>
               </div>
-              <div className="absolute top-[62px] left-1/2 -translate-x-[calc(50%-44px)] z-10">
+              <div className="absolute top-[22px] left-1/2 -translate-x-[calc(50%-44px)] z-10">
                 <Button
                   onClick={() => handleJog(5, 1)}
                   disabled={isMoving}
@@ -586,7 +586,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
               </div>
 
               {/* RX Controls (Flanking Left Down) */}
-              <div className="absolute bottom-[148px] left-8 z-10">
+              <div className="absolute bottom-[108px] left-8 z-10">
                 <Button
                   onClick={() => handleJog(3, -1)}
                   disabled={isMoving}
@@ -596,7 +596,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
                   -RX
                 </Button>
               </div>
-              <div className="absolute bottom-[68px] left-20 z-10">
+              <div className="absolute bottom-[28px] left-20 z-10">
                 <Button
                   onClick={() => handleJog(3, 1)}
                   disabled={isMoving}
@@ -608,7 +608,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
               </div>
 
               {/* RY Controls (Flanking Right Down) */}
-              <div className="absolute bottom-[148px] right-8 z-10">
+              <div className="absolute bottom-[108px] right-8 z-10">
                 <Button
                   onClick={() => handleJog(4, -1)}
                   disabled={isMoving}
@@ -618,7 +618,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
                   -RY
                 </Button>
               </div>
-              <div className="absolute bottom-[68px] right-20 z-10">
+              <div className="absolute bottom-[28px] right-20 z-10">
                 <Button
                   onClick={() => handleJog(4, 1)}
                   disabled={isMoving}
