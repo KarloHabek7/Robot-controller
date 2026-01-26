@@ -98,7 +98,11 @@
         "refreshPrograms": "Osvježi Programe",
         "noProgramsFound": "Nema programa (provjerite FTP)",
         "resume": "Nastavi",
-        "pause": "Pauziraj"
+        "pause": "Pauziraj",
+        "manuallyEnterName": "Ručno unesite naziv programa",
+        "availablePrograms": "Dostupni Programi",
+        "startByName": "Pokreni po nazivu",
+        "searchPrograms": "Pretraži programe..."
     },
     "commands": {
         "quickCommands": "Brze Naredbe",
@@ -132,6 +136,7 @@
         "apply": "Primijeni",
         "returnHome": "Vrati se na početnu",
         "refresh": "Osvježi",
+        "noResults": "Nema rezultata",
         "version": "Industrijsko Kontrolno Sučelje v1.0"
     },
     "errors": {
@@ -148,8 +153,8 @@
         "reset": "SUSTAV RESETIRAN",
         "holdToReset": "DRŽITE ZA RESET",
         "stop": "STOP",
-        "emergency": "Hitno",
-        "stopLabel": "Zaustavljanje"
+        "emergency": "Zaustavljanje",
+        "stopLabel": "u nuždi"
     },
     "theme": {
         "light": "Svijetli Način",

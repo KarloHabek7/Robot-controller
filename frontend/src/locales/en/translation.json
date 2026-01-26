@@ -98,7 +98,11 @@
         "refreshPrograms": "Refresh Programs",
         "noProgramsFound": "No programs found (check FTP)",
         "resume": "Resume",
-        "pause": "Pause"
+        "pause": "Pause",
+        "manuallyEnterName": "Enter program name manually",
+        "availablePrograms": "Available Programs",
+        "startByName": "Start by name",
+        "searchPrograms": "Search programs..."
     },
     "commands": {
         "quickCommands": "Quick Commands",
@@ -132,6 +136,7 @@
         "apply": "Apply",
         "returnHome": "Return to Home",
         "refresh": "Refresh",
+        "noResults": "No results found",
         "version": "Industrial Control Interface v1.0"
     },
     "errors": {

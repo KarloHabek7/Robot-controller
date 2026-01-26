@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from "react-i18next";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuthStore } from '@/stores/authStore';
 import { useTheme } from "./theme-provider";
 import { Button } from '@/components/ui/button';
@@ -13,13 +13,14 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Sun, Moon, Languages, LogOut, LayoutDashboard, User as UserIcon, Menu } from 'lucide-react';
+import { Sun, Moon, Languages, LogOut, LayoutDashboard, User as UserIcon, Menu, Home } from 'lucide-react';
 
 export const Navbar = () => {
     const { t, i18n } = useTranslation();
     const { theme, setTheme } = useTheme();
     const { user, logout } = useAuthStore();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleLogout = () => {
         logout();
@@ -34,6 +35,8 @@ export const Navbar = () => {
     const toggleTheme = () => {
         setTheme(theme === 'dark' ? 'light' : 'dark');
     };
+
+    const isAdminPage = location.pathname === '/admin';
 
     return (
         <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full px-4 md:px-6">
@@ -50,16 +53,25 @@ export const Navbar = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {/* Admin Dashboard - only for superusers */}
+                    {/* Admin Dashboard / Return Home - only for superusers */}
                     {user?.is_superuser && (
                         <Button
                             variant="ghost"
                             size="sm"
                             className="hidden md:flex gap-2 text-xs font-bold uppercase tracking-wider"
-                            onClick={() => navigate('/admin')}
+                            onClick={() => navigate(isAdminPage ? '/' : '/admin')}
                         >
-                            <LayoutDashboard className="h-4 w-4" />
-                            {t('admin.dashboard')}
+                            {isAdminPage ? (
+                                <>
+                                    <Home className="h-4 w-4" />
+                                    {t('common.returnHome')}
+                                </>
+                            ) : (
+                                <>
+                                    <LayoutDashboard className="h-4 w-4" />
+                                    {t('admin.dashboard')}
+                                </>
+                            )}
                         </Button>
                     )}
 
@@ -118,9 +130,18 @@ export const Navbar = () => {
                             {/* Mobile only items */}
                             <div className="md:hidden">
                                 {user?.is_superuser && (
-                                    <DropdownMenuItem onClick={() => navigate('/admin')}>
-                                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                                        <span>{t('admin.dashboard')}</span>
+                                    <DropdownMenuItem onClick={() => navigate(isAdminPage ? '/' : '/admin')}>
+                                        {isAdminPage ? (
+                                            <>
+                                                <Home className="mr-2 h-4 w-4" />
+                                                <span>{t('common.returnHome')}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <LayoutDashboard className="mr-2 h-4 w-4" />
+                                                <span>{t('admin.dashboard')}</span>
+                                            </>
+                                        )}
                                     </DropdownMenuItem>
                                 )}
                             </div>
@@ -138,3 +159,4 @@ export const Navbar = () => {
 };
 
 export default Navbar;
+
