@@ -115,7 +115,7 @@
         "failed": "Slanje naredbe nije uspjelo"
     },
     "logs": {
-        "commandLog": "Dnevnik Naredbi",
+        "commandLog": "Upravljanje naredbama",
         "timestamp": "Vrijeme",
         "command": "Naredba",
         "status": "Status",
@@ -149,7 +149,7 @@
         "fetchFailed": "Dohvaćanje programa putem FTP-a nije uspjelo. Provjerite vezu."
     },
     "estop": {
-        "activated": "HITNO ZAUSTAVLJANJE AKTIVIRANO",
+        "activated": "ZAUSTAVLJANJE U SLUČAJU NUŽDE AKTIVIRANO",
         "reset": "SUSTAV RESETIRAN",
         "holdToReset": "DRŽITE ZA RESET",
         "stop": "STOP",
@@ -172,7 +172,7 @@
         "language": "Jezik"
     },
     "navigation": {
-        "controlInterface": "Kontrolno Sučelje",
+        "controlInterface": "Upravljačko Sučelje",
         "connectionSettings": "Veza",
         "jointControl": "Upravljanje\nZglobovima",
         "tcpControl": "TCP\nUpravljanje",
@@ -181,7 +181,7 @@
         "notFound": "Ups! Stranica nije pronađena"
     },
     "admin": {
-        "dashboard": "Admin Nadzorna Ploča",
+        "dashboard": "Administratorska Ploča",
         "userManagement": "Upravljanje Korisnicima",
         "username": "Korisničko ime",
         "email": "E-pošta",

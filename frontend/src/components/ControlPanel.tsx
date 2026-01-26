@@ -404,12 +404,12 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
               {isMoving ? (
                 <>
                   <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin" />
-                  {t('robot.moving')}
+                  <span className="hidden sm:inline">{t('robot.moving')}</span>
                 </>
               ) : (
                 <>
                   <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  {t('robot.apply')}
+                  <span className="hidden sm:inline">{t('robot.apply')}</span>
                 </>
               )}
             </Button>

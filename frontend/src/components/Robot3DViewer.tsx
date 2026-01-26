@@ -151,18 +151,19 @@ const LinkedCoordinateFrame = ({
 };
 
 const TCPCoordinateSystem = ({ endEffectorNode }: { endEffectorNode: THREE.Object3D | null }) => {
-  const { actualTcpPose, isConnected, tcpVisualizationMode } = useRobotStore();
+  const { actualTcpPose, isConnected, tcpVisualizationMode, activeControlMode, isMoving } = useRobotStore();
   if (!isConnected) return null;
   return (
     <>
-      {(tcpVisualizationMode === 'real' || tcpVisualizationMode === 'both') && (
-        <CoordinateFrame
-          pose={actualTcpPose}
-          label="TCP Real"
-          opacity={tcpVisualizationMode === 'both' ? 0.5 : 1}
-        />
-      )}
-      {(tcpVisualizationMode === 'linked' || tcpVisualizationMode === 'both') && endEffectorNode && (
+      {(tcpVisualizationMode === 'real' || tcpVisualizationMode === 'both') &&
+        !(activeControlMode === 'joint' && isMoving) && (
+          <CoordinateFrame
+            pose={actualTcpPose}
+            label="TCP Real"
+            opacity={tcpVisualizationMode === 'both' ? 0.5 : 1}
+          />
+        )}
+      {((tcpVisualizationMode === 'linked' || tcpVisualizationMode === 'both') || (activeControlMode === 'joint' && isMoving)) && endEffectorNode && (
         <LinkedCoordinateFrame
           endEffectorNode={endEffectorNode}
           pose={actualTcpPose}
@@ -297,7 +298,8 @@ const RobotScene = () => {
     isMoving,
     targetTcpPose,
     actualTcpPose,
-    tcpVisualizationMode
+    tcpVisualizationMode,
+    activeControlMode
   } = useRobotStore();
 
   const currentJointAngles = useRef<number[]>(actualJoints);
@@ -401,8 +403,8 @@ const RobotScene = () => {
           />
         )}
 
-        {/* Target TCP Frame - Only when dirty */}
-        {isConnected && isTargetDirty && (
+        {/* Target TCP Frame - Only when dirty, and NOT if we are in joint mode while moving (it would be the old/start position) */}
+        {isConnected && isTargetDirty && !(activeControlMode === 'joint' && isMoving) && (
           (tcpVisualizationMode === 'linked' || tcpVisualizationMode === 'both') && endEffectorNode ? (
             <LinkedCoordinateFrame
               endEffectorNode={endEffectorNode}
@@ -458,7 +460,7 @@ const Robot3DViewer = () => {
     // Changed: Removed min-h-[400px], added h-full w-full to fill parent
     <div className="w-full h-full relative group bg-gradient-to-b from-background to-secondary/5 overflow-hidden">
       <Canvas shadows dpr={[1, 2]} className="w-full h-full">
-        <PerspectiveCamera makeDefault position={[4, 3, 4]} fov={45} />
+        <PerspectiveCamera makeDefault position={[2, 1.5, 2]} fov={45} />
         <OrbitControls
           enableDamping
           dampingFactor={0.05}
