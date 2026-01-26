@@ -4,8 +4,9 @@ import os
 import platform
 import time
 import threading
-import webbrowser
 import signal
+import re
+import socket
 
 # Configuration
 BACKEND_DIR = "backend"
@@ -13,7 +14,9 @@ FRONTEND_DIR = "frontend"
 VENV_DIR = ".venv"
 REQUIREMENTS_FILE = os.path.join(BACKEND_DIR, "requirements.txt")
 # Tunnel Configuration
-TUNNEL_PROVIDER = os.environ.get("TUNNEL_PROVIDER", "ngrok").lower()
+TUNNEL_PROVIDER = os.environ.get("TUNNEL_PROVIDER", "none").lower()
+
+
 
 # Try to load from .env file
 if os.path.exists(".env"):
@@ -21,15 +24,8 @@ if os.path.exists(".env"):
         for line in f:
             if line.startswith("TUNNEL_PROVIDER="):
                 TUNNEL_PROVIDER = line.split("=", 1)[1].strip().strip('"').strip("'").lower()
-            elif line.startswith("NGROK_AUTHTOKEN="):
-                NGROK_AUTHTOKEN = line.split("=", 1)[1].strip().strip('"').strip("'")
 
 print(f"[Config] Tunnel provider: {TUNNEL_PROVIDER}")
-if TUNNEL_PROVIDER == "ngrok":
-    if NGROK_AUTHTOKEN:
-        print(f"[Config] NGROK_AUTHTOKEN loaded (starts with {NGROK_AUTHTOKEN[:5]}...)")
-    else:
-        print("[Config] No NGROK_AUTHTOKEN found for ngrok.")
 
 def is_windows():
     return platform.system().lower() == "windows"
@@ -57,19 +53,7 @@ def setup_frontend():
     # Using shell=True for windows npm compatibility if not in path as executable
     subprocess.check_call(["npm", "install"], cwd=FRONTEND_DIR, shell=is_windows())
 
-def get_tunnel_url(process, provider):
-    """Wait for tunnel process to output the public URL."""
-    start_time = time.time()
-    url = None
-    while time.time() - start_time < 15: # 15s timeout
-        line = process.stdout.readline()
-        if not line:
-            break
-        line_str = line.decode('utf-8', errors='ignore').strip()
-        if "your url is:" in line_str.lower():
-            url = line_str.split("is:")[1].strip()
-            break
-    return url
+
 
 def setup_tunnel():
     global USE_NGROK
@@ -78,71 +62,79 @@ def setup_tunnel():
 
     if TUNNEL_PROVIDER == "none":
         print("[Tunnel] Tunnel provider disabled (using local access only).")
-        # Ensure .env.local is cleaned up if no tunnel
-        env_local = os.path.join(FRONTEND_DIR, ".env.local")
-        if os.path.exists(env_local):
-            os.remove(env_local)
+        
+        # Find the local IP (e.g., 192.168.1.15) to configure the frontend
+        local_ip = "localhost"
+        try:
+            # Connect to a dummy external IP to get the interface IP
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+        except:
+            pass
+            
+        print(f"[Config] Configuring Frontend to use Local IP: http://{local_ip}:8000")
+        
+        # Write the Local IP to the frontend .env.local
+        with open(os.path.join(FRONTEND_DIR, ".env.local"), "w") as f:
+            f.write(f"VITE_API_BASE_URL=http://{local_ip}:8000\n")
+            
         USE_NGROK = False
         return None, None
 
-    if TUNNEL_PROVIDER == "ngrok":
-        if not NGROK_AUTHTOKEN:
-            print("[ngrok] No NGROK_AUTHTOKEN found. Skipping.")
-            return None, None
+    elif TUNNEL_PROVIDER == "cloudflare":
+        print("[cloudflare] Setting up tunnels...")
         try:
-            from pyngrok import ngrok
-            print("[ngrok] Setting up tunnels...")
-            ngrok.set_auth_token(NGROK_AUTHTOKEN)
+            # Check if cloudflared.exe exists
+            exe_path = "cloudflared.exe"
+            if not os.path.exists(exe_path):
+                # Try finding it in PATH
+                exe_path = "cloudflared"
             
-            # Backend tunnel
-            backend_tunnel = ngrok.connect("127.0.0.1:8000", "http")
-            print(f"[ngrok] Backend tunnel: {backend_tunnel.public_url}")
+            # Backend Tunnel
+            cmd_back = [exe_path, "tunnel", "--url", "http://localhost:8000"]
+            p_back = subprocess.Popen(cmd_back, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=is_windows())
             
-            # Frontend tunnel
-            frontend_tunnel = ngrok.connect("127.0.0.1:8080", "http")
-            print(f"[ngrok] Frontend tunnel: {frontend_tunnel.public_url}")
+            # Cloudflare prints URL to stderr usually, but we captured stdout/err together
+            start_time = time.time()
+            while time.time() - start_time < 15:
+                line = p_back.stdout.readline()
+                if not line: break
+                line_str = line.decode('utf-8', errors='ignore').strip()
+                # Look for trycloudflare.com
+                if "trycloudflare.com" in line_str:
+                    match = re.search(r'https?://[a-zA-Z0-9-]+\.trycloudflare\.com', line_str)
+                    if match:
+                        backend_url = match.group(0)
+                        print(f"[cloudflare] Backend: {backend_url}")
+                        break
+            processes.append(p_back)
+
+            # Frontend Tunnel
+            cmd_front = [exe_path, "tunnel", "--url", "http://localhost:8080"]
+            p_front = subprocess.Popen(cmd_front, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=is_windows())
+            
+            start_time = time.time()
+            while time.time() - start_time < 15:
+                line = p_front.stdout.readline()
+                if not line: break
+                line_str = line.decode('utf-8', errors='ignore').strip()
+                if "trycloudflare.com" in line_str:
+                    match = re.search(r'https?://[a-zA-Z0-9-]+\.trycloudflare\.com', line_str)
+                    if match:
+                        frontend_url = match.group(0)
+                        print(f"[cloudflare] Frontend: {frontend_url}")
+                        break
+            processes.append(p_front)
             
             USE_NGROK = True
-            backend_url = backend_tunnel.public_url
-            frontend_url = frontend_tunnel.public_url
         except Exception as e:
-            print(f"[ngrok] Error: {e}")
-            return None, None
-
-    elif TUNNEL_PROVIDER == "localtunnel":
-        print("[localtunnel] Setting up tunnels via npx...")
-        try:
-            # Backend tunnel
-            cmd_back = ["npx", "lt", "--port", "8000"]
-            p_back = subprocess.Popen(cmd_back, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=is_windows())
-            backend_url = get_tunnel_url(p_back, "localtunnel")
-            processes.append(p_back)
-            
-            if backend_url:
-                print(f"[localtunnel] Backend tunnel: {backend_url}")
-            else:
-                print("[localtunnel] Failed to get backend URL.")
-                return None, None
-
-            # Frontend tunnel
-            cmd_front = ["npx", "lt", "--port", "8080"]
-            p_front = subprocess.Popen(cmd_front, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=is_windows())
-            frontend_url = get_tunnel_url(p_front, "localtunnel")
-            processes.append(p_front)
-
-            if frontend_url:
-                print(f"[localtunnel] Frontend tunnel: {frontend_url}")
-            else:
-                print("[localtunnel] Failed to get frontend URL.")
-                return None, None
-            
-            USE_NGROK = True # We use the same flag for 'using a tunnel' logic
-        except Exception as e:
-            print(f"[localtunnel] Error: {e}")
+            print(f"[cloudflare] Error: {e}")
+            print("Make sure 'cloudflared.exe' is in this folder!")
             return None, None
 
     if backend_url:
-        # Write backend URL to frontend .env.local
         with open(os.path.join(FRONTEND_DIR, ".env.local"), "w") as f:
             f.write(f"VITE_API_BASE_URL={backend_url}\n")
         return backend_url, frontend_url
@@ -177,9 +169,8 @@ def start_frontend():
     cmd = ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
     
     env = os.environ.copy()
-    if USE_NGROK:
-        # Actually, if vite.config.ts has https, we tell Vite via an env var.
-        env["VITE_NO_HTTPS"] = "true"
+    # Always force HTTP to match backend to avoid mixed content/ssl errors
+    env["VITE_NO_HTTPS"] = "true"
 
     # Use Popen to keep track of the process
     p = subprocess.Popen(cmd, cwd=FRONTEND_DIR, shell=is_windows(), env=env)
@@ -187,7 +178,6 @@ def start_frontend():
     return p
 
 def get_local_ips():
-    import socket
     ips = []
     try:
         # Get hostname
@@ -245,14 +235,28 @@ def main():
     for ip in local_ips:
         print(f"   - http://{ip}:8080")
     
+    
+    # QR Code Logic
+    qr_url = None
     if frontend_tunnel:
-        print(f"   - {frontend_tunnel} (Remote w/ ngrok)")
+        print(f"   - {frontend_tunnel} (Remote)")
+        qr_url = frontend_tunnel
+
+    # Even if no tunnel, we might want to show QR for local IP if easy access is desired
+    if not qr_url and TUNNEL_PROVIDER == "none":
+         # Pick the first non-localhost IP
+        for ip in local_ips:
+            if ip != "localhost":
+                qr_url = f"http://{ip}:8080"
+                break
+
+    if qr_url:
         try:
             import qrcode
             qr = qrcode.QRCode(version=1, border=1)
-            qr.add_data(frontend_tunnel)
+            qr.add_data(qr_url)
             qr.make(fit=True)
-            print("\n   Scan to open on mobile:")
+            print(f"\n   Scan to open on mobile ({qr_url}):")
             qr.print_ascii(invert=True)
         except ImportError:
             pass
@@ -264,17 +268,6 @@ def main():
         if ip != "localhost":
             target_url = f"http://{ip}:8080"
             break
-
-    print(f"[Ready] Attempting to open browser at {target_url} in 2 seconds...")
-    
-    def open_browser():
-        time.sleep(2)
-        try:
-            webbrowser.open(target_url)
-        except:
-            pass
-
-    threading.Thread(target=open_browser, daemon=True).start()
 
     print("\n[Monitor] Press Ctrl+C to shut down all services safely.\n")
 

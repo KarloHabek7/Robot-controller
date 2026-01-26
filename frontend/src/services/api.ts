@@ -1,5 +1,17 @@
 // API Service for UR5 Robot Control
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || `${window.location.protocol}//${window.location.hostname}:8000`;
+// Smart API URL selection:
+// 1. If we are on localhost/127.0.0.1 or local network (192.168.x.x), use the local backend directly (port 8000).
+//    This allows local usage even if the tunnel environment variable is set.
+// 2. Otherwise (remote access), use the configured VITE_API_BASE_URL (tunnel) or fallback to relative.
+
+const isLocalNetwork =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.startsWith('192.168.');
+
+const API_BASE_URL = isLocalNetwork
+    ? `${window.location.protocol}//${window.location.hostname}:8000`
+    : (import.meta.env.VITE_API_BASE_URL as string) || `${window.location.protocol}//${window.location.hostname}:8000`;
 
 // Token management
 export const getToken = (): string | null => {

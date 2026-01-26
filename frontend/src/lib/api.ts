@@ -1,4 +1,12 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || `${window.location.protocol}//${window.location.hostname}:8000`;
+// Smart API URL selection:
+const isLocalNetwork =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.startsWith('192.168.');
+
+const API_BASE_URL = isLocalNetwork
+    ? `${window.location.protocol}//${window.location.hostname}:8000`
+    : (import.meta.env.VITE_API_BASE_URL as string) || `${window.location.protocol}//${window.location.hostname}:8000`;
 
 interface LoginCredentials {
     username: string;
