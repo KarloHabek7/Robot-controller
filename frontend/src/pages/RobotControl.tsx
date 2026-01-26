@@ -129,27 +129,28 @@ const RobotControl = () => {
                 </div>
               </div>
 
-              {/* Bottom Overlay: TCP Info & E-Stop */}
-              <div className="absolute bottom-3 left-3 right-3 sm:bottom-8 sm:left-8 sm:right-8 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-3 sm:gap-4 pointer-events-none">
-                <div className="flex flex-col sm:flex-row items-center sm:items-end gap-2 sm:gap-3 pointer-events-auto w-full sm:w-auto">
+              {/* Bottom Overlay: TCP Info & Switcher */}
+              <div className="absolute bottom-3 left-2 sm:left-8 pointer-events-none z-20">
+                <div className="flex items-end gap-3 sm:gap-4 scale-[0.75] sm:scale-100 origin-bottom-left pointer-events-auto">
+                  {/* Coordinates on the left */}
                   <PositionDisplayCompact pose={actualTcpPose} />
 
-                  {/* TCP Preview Switcher - Horizontal on mobile, vertical handle restored */}
-                  <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 shadow-2xl h-auto sm:h-[80px] flex flex-row sm:flex-col justify-between items-center sm:items-stretch gap-3 sm:gap-0 min-w-0 w-full sm:min-w-[190px]">
-                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 sm:mt-0.5 shrink-0">
-                      <Target className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
-                      <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] text-primary whitespace-nowrap">
+                  {/* Switcher on the right of coordinates */}
+                  <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 shadow-2xl h-[65px] sm:h-[80px] flex flex-col justify-between min-w-[130px] sm:min-w-[190px]">
+                    <div className="flex items-center justify-center gap-1 sm:gap-2 mt-0 sm:mt-0.5">
+                      <Target className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-primary" />
+                      <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] text-primary truncate">
                         {t('robot.tcpPreview')}
                       </span>
                     </div>
 
-                    <div className="flex flex-1 gap-1 bg-secondary/15 p-1 rounded-lg sm:rounded-xl border border-border/10">
+                    <div className="flex gap-0.5 sm:gap-1 bg-secondary/15 p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-border/10">
                       {(['real', 'linked', 'both'] as const).map((mode) => (
                         <button
                           key={mode}
                           onClick={() => setTCPVisualizationMode(mode)}
                           className={cn(
-                            "flex-1 py-1 rounded-md sm:rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider transition-all",
+                            "flex-1 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[7px] sm:text-[9px] font-black uppercase tracking-wider transition-all",
                             tcpVisualizationMode === mode
                               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                               : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
@@ -161,10 +162,11 @@ const RobotControl = () => {
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="pointer-events-auto scale-75 sm:scale-100 origin-bottom sm:origin-bottom-right">
-                  <EmergencyStop />
-                </div>
+              {/* Bottom Right: Emergency Stop - Separated to ensure visibility */}
+              <div className="absolute bottom-3 right-3 sm:bottom-8 sm:right-8 pointer-events-auto scale-[0.65] sm:scale-100 origin-bottom-right z-30">
+                <EmergencyStop />
               </div>
             </CardContent>
           </Card>

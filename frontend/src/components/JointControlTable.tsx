@@ -105,72 +105,70 @@ const JointControlTable = () => {
   return (
     <div className="bg-card border rounded-xl p-3 sm:p-6 h-full flex flex-col shadow-sm">
       {/* Header Controls */}
-      <div className="flex flex-col gap-4 mb-4 sm:mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-secondary/5 rounded-lg border border-border/40">
+      <div className="flex flex-col gap-4 mb-4 sm:mb-6 shrink-0">
+        <div className="flex flex-nowrap items-center justify-between gap-1 sm:gap-3 p-1 sm:p-2 bg-secondary/5 rounded-lg border border-border/40 overflow-hidden">
           {/* Global Increment Adjustment */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center bg-secondary/10 rounded-full border border-border/40 pl-3 pr-1 py-0.5 gap-2 shrink-0">
-              <span className="text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">
+          <div className="flex items-center gap-1 sm:gap-3 min-w-0">
+            <div className="flex items-center bg-secondary/10 rounded-full border border-border/40 pl-2 sm:pl-3 pr-1 py-0.5 gap-1 sm:gap-2 shrink-0">
+              <span className="text-[8px] sm:text-[9px] text-muted-foreground font-black tracking-tighter uppercase whitespace-nowrap">
                 {t('robot.step', { unit: '°' })}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 rounded-full hover:bg-white/10"
+                  className="h-4 w-4 sm:h-5 sm:w-5 rounded-full hover:bg-white/10"
                   onClick={() => setIncrementOverride((Math.max(0.1, parseFloat(incrementOverride) - 0.5)).toFixed(1))}
                   disabled={isMoving || isEStopActive}
                 >
-                  <Minus className="h-3 w-3" />
+                  <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 </Button>
-                <div className="w-8">
+                <div className="w-7 sm:w-8">
                   <Input
                     type="number"
                     value={incrementOverride}
                     onChange={(e) => setIncrementOverride(e.target.value)}
-                    className="h-5 border-0 bg-transparent p-0 text-[11px] font-black text-center focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="h-4 sm:h-5 border-0 bg-transparent p-0 text-[10px] sm:text-[11px] font-black text-center focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     disabled={isMoving || isEStopActive}
                   />
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 rounded-full hover:bg-white/10"
+                  className="h-4 w-4 sm:h-5 sm:w-5 rounded-full hover:bg-white/10"
                   onClick={() => setIncrementOverride((parseFloat(incrementOverride) + 0.5).toFixed(1))}
                   disabled={isMoving || isEStopActive}
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 </Button>
               </div>
             </div>
 
-            <div className="hidden sm:block h-4 w-px bg-border/40 mx-1" />
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Zap className={`w-3.5 h-3.5 ${directControlEnabled ? 'text-amber-500 fill-amber-500/20' : 'text-muted-foreground'}`} />
-              <Label htmlFor="direct-control" className="text-[10px] uppercase font-bold tracking-tight text-muted-foreground cursor-pointer whitespace-nowrap">
-                {t('robot.directControl')}
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">
+              <Zap className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${directControlEnabled ? 'text-amber-500 fill-amber-500/20' : 'text-muted-foreground'}`} />
+              <Label htmlFor="direct-control" className="text-[8px] sm:text-[10px] uppercase font-bold tracking-tight text-muted-foreground cursor-pointer whitespace-nowrap truncate max-w-[50px] sm:max-w-none">
+                {t('robot.directControl').length > 10 ? t('robot.directControl').split(' ')[0] : t('robot.directControl')}
               </Label>
               <Switch
                 id="direct-control"
                 checked={directControlEnabled}
                 onCheckedChange={setDirectControlEnabled}
-                className="scale-75"
+                className="scale-[0.6] sm:scale-75 origin-left"
               />
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={handleReset}
               disabled={isMoving || isEStopActive}
-              className="gap-2 h-7 px-2 text-[10px] sm:text-xs"
+              className="gap-1 h-6 sm:h-7 px-1.5 sm:px-2 text-[9px] sm:text-xs"
             >
-              <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              {t('robot.reset')}
+              <RotateCcw className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden xs:inline">{t('robot.reset')}</span>
             </Button>
 
             {!directControlEnabled && isTargetDirty && (
@@ -179,17 +177,17 @@ const JointControlTable = () => {
                 size="sm"
                 onClick={handleApply}
                 disabled={isMoving || isEStopActive}
-                className="gap-2 h-7 px-2 text-[10px] sm:text-xs bg-primary hover:bg-primary/90"
+                className="gap-1 h-6 sm:h-7 px-1.5 sm:px-2 text-[9px] sm:text-xs bg-primary hover:bg-primary/90"
               >
                 {isMoving ? (
                   <>
-                    <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin" />
-                    {t('robot.moving')}
+                    <Loader2 className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 animate-spin" />
+                    <span className="hidden xs:inline">{t('robot.moving')}</span>
                   </>
                 ) : (
                   <>
-                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                    {t('robot.apply')}
+                    <Check className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
+                    <span className="hidden xs:inline">{t('robot.apply')}</span>
                   </>
                 )}
               </Button>
@@ -209,14 +207,14 @@ const JointControlTable = () => {
           return (
             <div
               key={joint.id}
-              className={`flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-all ${isDirty
+              className={`flex flex-col sm:flex-nowrap sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-all ${isDirty
                 ? 'bg-primary/5 border-primary/50 shadow-sm'
                 : 'bg-secondary/10 border-border/50'
                 } ${(isMoving || isEStopActive) ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              {/* Joint Name and Buttons Group - Always together */}
-              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-                <div className="w-12 sm:w-14 shrink-0">
+              {/* Row 1: Controls and Info */}
+              <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+                <div className="w-10 sm:w-14 shrink-0">
                   <div className="text-[8px] sm:text-[10px] text-muted-foreground font-mono">J{joint.id}</div>
                   <div className="text-xs sm:text-sm font-bold text-foreground leading-tight truncate px-0.5" title={t(joint.name)}>
                     {t(joint.name)}
@@ -244,16 +242,37 @@ const JointControlTable = () => {
                   </Button>
                 </div>
 
-                {/* Status on mobile - moved next to name */}
-                <div className="flex sm:hidden flex-1 justify-end text-right overflow-hidden pr-1">
-                  <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight whitespace-nowrap">
-                    {t('robot.act')} <span className="text-foreground/80">{actualAngle.toFixed(1)}°</span>
+                {/* Actual and Input on Row 1 for mobile */}
+                <div className="flex flex-1 items-center justify-end gap-2">
+                  <div className="flex flex-col items-end shrink-0 sm:hidden">
+                    <span className="text-[8px] text-muted-foreground/60 font-mono leading-none">{t('robot.act')}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-foreground/80 font-mono">{actualAngle.toFixed(1)}°</span>
+                      {isDirty && (
+                        <span className="text-[9px] font-black text-primary font-mono whitespace-nowrap">
+                          {delta > 0 ? '+' : ''}{delta.toFixed(1)}°
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="w-16 sm:w-20 shrink-0">
+                    <div className="flex items-center bg-background border rounded h-7 sm:h-8 px-1 focus-within:ring-1 focus-within:ring-primary/30 transition-shadow">
+                      <Input
+                        type="number"
+                        value={targetAngle.toFixed(2)}
+                        onChange={(e) => handleInputChange(joint.id, e.target.value)}
+                        disabled={isMoving}
+                        className="border-0 p-0 h-5 sm:h-6 text-xs sm:text-sm text-center focus-visible:ring-0 font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[9px] sm:text-[10px] text-muted-foreground ml-0.5">°</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Slider - takes available space in the middle */}
-              <div className="flex-1 px-2 sm:px-4 min-w-[120px] sm:min-w-[60px]">
+              {/* Slider - takes available space (full width on mobile second row, flex-1 on desktop) */}
+              <div className="w-full sm:flex-1 px-1 sm:px-4">
                 <Slider
                   value={[targetAngle]}
                   onValueChange={(values) => handleSliderChange(joint.id, values[0])}
@@ -266,31 +285,16 @@ const JointControlTable = () => {
                 />
               </div>
 
-              {/* Input and status Group */}
-              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end sm:justify-start mt-1 sm:mt-0">
-                <div className="w-20 shrink-0">
-                  <div className="flex items-center bg-background border rounded h-8 px-1 focus-within:ring-1 focus-within:ring-primary/30 transition-shadow">
-                    <Input
-                      type="number"
-                      value={targetAngle.toFixed(2)}
-                      onChange={(e) => handleInputChange(joint.id, e.target.value)}
-                      disabled={isMoving}
-                      className="border-0 p-0 h-6 text-xs sm:text-sm text-center focus-visible:ring-0 font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <span className="text-[10px] text-muted-foreground ml-0.5">°</span>
-                  </div>
+              {/* Desktop-only status cluster */}
+              <div className="hidden sm:flex w-20 shrink-0 flex-col gap-0 justify-center text-right overflow-hidden pr-1">
+                <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight truncate">
+                  {t('robot.act')} <span className="text-foreground/80">{actualAngle.toFixed(2)}°</span>
                 </div>
-
-                <div className="hidden sm:flex w-20 shrink-0 flex-col gap-0 justify-center text-right overflow-hidden pr-1">
-                  <div className="text-[9px] text-muted-foreground/60 font-mono leading-tight truncate">
-                    {t('robot.act')} <span className="text-foreground/80">{actualAngle.toFixed(2)}°</span>
+                {isDirty && (
+                  <div className="text-[9px] font-bold font-mono text-primary leading-tight truncate">
+                    {t('robot.delta')} {delta > 0 ? '+' : ''}{delta.toFixed(2)}°
                   </div>
-                  {isDirty && (
-                    <div className="text-[9px] font-bold font-mono text-primary leading-tight truncate">
-                      {t('robot.delta')} {delta > 0 ? '+' : ''}{delta.toFixed(2)}°
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           );

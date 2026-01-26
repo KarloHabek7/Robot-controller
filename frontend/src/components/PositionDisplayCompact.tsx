@@ -24,7 +24,7 @@ const PositionDisplayCompact = ({ pose }: PositionDisplayCompactProps) => {
     ];
 
     return (
-        <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-xl sm:rounded-2xl p-2 sm:p-4 shadow-2xl opacity-98 pointer-events-auto h-auto sm:h-[80px] flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+        <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-xl sm:rounded-2xl p-2 sm:p-4 shadow-2xl opacity-98 pointer-events-auto h-auto sm:h-[80px] flex items-center gap-2 sm:gap-4 w-auto">
             <div className="flex flex-col justify-center items-center gap-1 sm:gap-1.5 px-1 sm:px-2 h-full shrink-0">
                 <Target className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                 <span className="text-[8px] sm:text-[10px] font-black uppercase text-primary leading-none">
