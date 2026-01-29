@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { useRobotStore } from '@/stores/robotStore';
 import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { toast } from 'sonner';
-import { Shield, ShieldAlert, RefreshCcw, AlertTriangle, Play, Unlock } from 'lucide-react';
+import { Shield, ShieldAlert, RefreshCcw, AlertTriangle, Play, Unlock, Square } from 'lucide-react';
 import { Button } from './ui/button';
 import { useTranslation } from 'react-i18next';
 
@@ -438,6 +438,8 @@ const Robot3DViewer = () => {
     robotMode,
     clearSafetyStatus,
     unlockProtectiveStop,
+    stopProgram,
+    programState,
     isMoving
   } = useRobotStore();
   const { t } = useTranslation();
@@ -509,13 +511,31 @@ const Robot3DViewer = () => {
             </div>
           )}
 
-          {/* Program Running Badge */}
-          {isConnected && robotMode === 7 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md shadow-lg transition-all border-blue-500/40 bg-blue-500/10 animate-pulse">
-              <Play className="w-3.5 h-3.5 text-blue-500 fill-blue-500/20" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-500">
-                {t('safety.programRunning')}
-              </span>
+          {/* Program Running Badge & Stop Action */}
+          {isConnected && programState === 1 && (
+            <div className="flex items-center gap-1.5 p-1 rounded-full border backdrop-blur-md shadow-lg transition-all border-blue-500/40 bg-blue-500/10">
+              <div className="flex items-center gap-2 px-2 py-0.5 animate-pulse">
+                <Play className="w-3 h-3 text-blue-500 fill-blue-500/20" />
+                <span className="text-[9px] font-black uppercase tracking-wider text-blue-500">
+                  {t('safety.programRunning')}
+                </span>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    await stopProgram();
+                    toast.success(t('programs.stopped'));
+                  } catch (err: any) {
+                    toast.error(err.message || 'Failed to stop program');
+                  }
+                }}
+                className="h-6 w-6 rounded-full bg-blue-500 hover:bg-blue-600 text-white border-none shadow-sm"
+              >
+                <Square className="w-2.5 h-2.5 fill-current" />
+              </Button>
             </div>
           )}
         </div>

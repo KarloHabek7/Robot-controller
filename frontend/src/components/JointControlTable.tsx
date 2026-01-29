@@ -24,10 +24,10 @@ const JointControlTable = () => {
     resetTargetToActual,
     directControlEnabled,
     setDirectControlEnabled,
-    robotMode,
+    programState,
   } = useRobotStore();
 
-  const isProgramRunning = robotMode === 7;
+  const isProgramRunning = programState === 1;
 
   // Local state for global increment override
   const [incrementOverride, setIncrementOverride] = useState<string>("5.0");

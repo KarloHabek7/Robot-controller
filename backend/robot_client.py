@@ -32,6 +32,7 @@ class RobotTCPClient:
         self.dashboard_reader: Optional[asyncio.StreamReader] = None
         self.dashboard_writer: Optional[asyncio.StreamWriter] = None
         self.dashboard_connected = False
+        self.dashboard_lock = asyncio.Lock()
 
         self.rtde_con: Optional[rtde.RTDE] = None
         self.rtde_config: Optional[rtde_config.ConfigFile] = None
@@ -48,6 +49,7 @@ class RobotTCPClient:
 
         self.robot_mode: int = -1
         self.safety_mode: int = -1
+        self.program_state: int = 0  # 0: STOPPED, 1: PLAYING, 2: PAUSED
         self.loaded_program: Optional[str] = None
 
         self.ftp_user = os.getenv("ROBOT_SFTP_USER", "root")
@@ -82,10 +84,14 @@ class RobotTCPClient:
             # 3. Dashboard connection (port 29999)
             try:
                 self.dashboard_reader, self.dashboard_writer = await asyncio.wait_for(
-                    asyncio.open_connection(host, 29999), 
+                    asyncio.open_connection(host, 29999),
                     timeout=2.0
                 )
                 self.dashboard_connected = True
+                # Read initial banner
+                try:
+                    await asyncio.wait_for(self.dashboard_reader.readuntil(b'\n'), timeout=1.0)
+                except: pass
                 print(f"[RobotClient] Dashboard connected on {host}:29999")
             except Exception as de:
                 print(f"[RobotClient] Dashboard connection skipped/failed: {de}")
@@ -214,23 +220,24 @@ class RobotTCPClient:
         if not self.dashboard_connected or not self.dashboard_writer or not self.dashboard_reader:
             return None
         
-        try:
-            cmd = command.strip() + "\n"
-            self.dashboard_writer.write(cmd.encode())
-            await self.dashboard_writer.drain()
-            
-            # Use wait_for to prevent hanging on dashboard response
-            response = await asyncio.wait_for(
-                self.dashboard_reader.readuntil(b'\n'),
-                timeout=2.0
-            )
-            resp_text = response.decode().strip()
-            print(f"[RobotClient] Dashboard: '{command}' -> '{resp_text}'")
-            return resp_text
-        except Exception as e:
-            print(f"[RobotClient] Dashboard command '{command}' failed: {e}")
-            self.dashboard_connected = False
-            return None
+        async with self.dashboard_lock:
+            try:
+                cmd = command.strip() + "\n"
+                self.dashboard_writer.write(cmd.encode())
+                await self.dashboard_writer.drain()
+                
+                # Use wait_for to prevent hanging on dashboard response
+                response = await asyncio.wait_for(
+                    self.dashboard_reader.readuntil(b'\n'),
+                    timeout=2.0
+                )
+                resp_text = response.decode().strip()
+                print(f"[RobotClient] Dashboard: '{command}' -> '{resp_text}'")
+                return resp_text
+            except Exception as e:
+                print(f"[RobotClient] Dashboard command '{command}' failed: {e}")
+                self.dashboard_connected = False
+                return None
 
     async def _rtde_handshake(self) -> bool:
         """Perform RTDE handshake and setup recipes using the library."""
@@ -282,17 +289,19 @@ class RobotTCPClient:
             try:
                 state = self.rtde_con.receive()
                 if state is None:
-                    # Connection lost or pause
+                    print("[RobotClient] RTDE: Received None, stopping worker")
                     break
                 
                 # Update modes and speed
-                self.robot_mode = getattr(state, 'robot_mode', self.robot_mode)
-                self.safety_mode = getattr(state, 'safety_mode', self.safety_mode)
+                rm = getattr(state, 'robot_mode', None)
+                sm = getattr(state, 'safety_mode', None)
+                if rm is not None: self.robot_mode = rm
+                if sm is not None: self.safety_mode = sm
                 
                 # actual_TCP_pose
                 tcp_pose = getattr(state, 'actual_TCP_pose', None)
                 
-                # q_actual
+                # actual_q
                 q_actual = getattr(state, 'actual_q', None)
                 
                 speed_scaling = getattr(state, 'speed_scaling', 1.0)
@@ -300,11 +309,11 @@ class RobotTCPClient:
                 self.rtde_speed_slider = max(speed_scaling, target_fraction)
 
                 # Update latest_state
-                if q_actual and tcp_pose:
+                if q_actual is not None and tcp_pose is not None:
                     self.latest_state = {
                         "joints": list(q_actual),
                         "tcp_pose": list(tcp_pose),
-                        "tcp_offset": [0.0] * 6, # Reset or remove if unused
+                        "tcp_offset": [0.0] * 6,
                         "speed_slider": self.rtde_speed_slider,
                         "timestamp": datetime.now().isoformat()
                     }
@@ -362,8 +371,23 @@ class RobotTCPClient:
             state = self.latest_state.copy()
             state["robot_mode"] = self.robot_mode
             state["safety_mode"] = self.safety_mode
+            state["program_state"] = self.program_state
             state["loaded_program"] = self.loaded_program
             return state
+        
+        # Fallback if feedback hasn't arrived yet but we are connected
+        if self.connected:
+             return {
+                "joints": [0.0]*6,
+                "tcp_pose": [0.0]*6,
+                "tcp_offset": [0.0]*6,
+                "speed_slider": self.rtde_speed_slider,
+                "robot_mode": self.robot_mode,
+                "safety_mode": self.safety_mode,
+                "program_state": self.program_state,
+                "loaded_program": self.loaded_program,
+                "timestamp": datetime.now().isoformat()
+            }
         return None
 
     async def _status_poller(self):
@@ -373,15 +397,32 @@ class RobotTCPClient:
             try:
                 if not self.rtde_connected and self.dashboard_connected:
                     # Poll dashboard for modes if RTDE is down
-                    mode_resp = await self.send_dashboard_command("robotmode")
-                    if mode_resp:
-                        # Format: "Robotmode: RUNNING" or similar
-                        if "RUNNING" in mode_resp: self.robot_mode = 7
-                        elif "POWER_OFF" in mode_resp: self.robot_mode = 3
-                        # ... other mappings if needed
+                    # We use a combined polling approach to minimize dashboard load
+                    # and avoid desync issues.
                     
+                    # 1. Robot Mode
+                    mode_resp = await self.send_dashboard_command("robotmode")
+                    if mode_resp and "robotmode:" in mode_resp.lower():
+                        low_mode = mode_resp.lower()
+                        if "running" in low_mode: self.robot_mode = 7
+                        elif "idle" in low_mode: self.robot_mode = 5
+                        elif "power_on" in low_mode: self.robot_mode = 4
+                        elif "power_off" in low_mode: self.robot_mode = 3
+                        elif "booting" in low_mode: self.robot_mode = 2
+                        elif "confirm_safety" in low_mode: self.robot_mode = 1
+                        elif "disconnected" in low_mode: self.robot_mode = 0
+
+                    # 2. Program State
+                    prog_resp = await self.send_dashboard_command("programState")
+                    if prog_resp:
+                        low_prog = prog_resp.lower()
+                        if "playing" in low_prog: self.program_state = 1
+                        elif "paused" in low_prog: self.program_state = 2
+                        elif "stopped" in low_prog: self.program_state = 0
+                    
+                    # 3. Safety Status
                     safety_resp = await self.send_dashboard_command("safetystatus")
-                    if safety_resp:
+                    if safety_resp and "safetystatus:" in safety_resp.lower():
                         if "PROTECTIVE_STOP" in safety_resp: self.safety_mode = 3
                         elif "EMERGENCY_STOP" in safety_resp: self.safety_mode = 4
                         elif "NORMAL" in safety_resp: self.safety_mode = 1

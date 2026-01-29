@@ -56,6 +56,7 @@ const RobotControl = () => {
         state.speed_slider,
         state.safety_mode,
         state.robot_mode,
+        state.program_state,
         state.loaded_program
       );
     });

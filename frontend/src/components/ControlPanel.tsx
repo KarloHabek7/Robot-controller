@@ -120,10 +120,10 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
     setCoordinateMode,
     directControlEnabled,
     setDirectControlEnabled,
-    robotMode,
+    programState,
   } = useRobotStore();
 
-  const isProgramRunning = robotMode === 7;
+  const isProgramRunning = programState === 1;
 
   // --- UI Converters ---
   const toUI = (pose: number[]) => [

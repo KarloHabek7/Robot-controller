@@ -100,6 +100,7 @@ interface RobotState {
   directControlEnabled: boolean;
   safetyMode: number;
   robotMode: number;
+  programState: number; // 0: STOPPED, 1: PLAYING, 2: PAUSED
   loadedProgram: string | null;
 
   // === ACTIONS ===
@@ -132,13 +133,14 @@ interface RobotState {
   setDirectControlEnabled: (enabled: boolean) => void;
 
   // Sync state
-  syncActualState: (joints: number[], tcpPose: number[], tcpOffset?: number[], speed?: number, safetyMode?: number, robotMode?: number, loadedProgram?: string | null) => void;
+  syncActualState: (joints: number[], tcpPose: number[], tcpOffset?: number[], speed?: number, safetyMode?: number, robotMode?: number, programState?: number, loadedProgram?: string | null) => void;
 
   resetTargetToActual: () => void;
   clearSafetyStatus: () => void;
   commitTargetJoints: () => void;
   commitTargetTcp: () => void;
   unlockProtectiveStop: () => Promise<void>;
+  stopProgram: () => Promise<void>;
 }
 
 // ============================================================================
@@ -185,6 +187,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   directControlEnabled: false,
   safetyMode: -1,
   robotMode: -1,
+  programState: 0,
   loadedProgram: null,
 
   // === ACTIONS ===
@@ -295,13 +298,14 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    * Does not affect target state
    * Updates isTargetDirty based on comparison with current target
    */
-  syncActualState: (joints: number[], tcpPose: number[], tcpOffset: number[] = [0, 0, 0, 0, 0, 0], speed?: number, safetyMode?: number, robotMode?: number, loadedProgram?: string | null) => {
+  syncActualState: (joints: number[], tcpPose: number[], tcpOffset: number[] = [0, 0, 0, 0, 0, 0], speed?: number, safetyMode?: number, robotMode?: number, programState?: number, loadedProgram?: string | null) => {
     set((state) => {
       // Convert speed from 0.0-1.0 (robot) to 0-100 (UI)
       const robotSpeedValue = speed !== undefined ? Math.round(speed * 100) : state.robotSpeed;
 
       const nextRobotMode = robotMode !== undefined ? robotMode : state.robotMode;
       const nextSafetyMode = safetyMode !== undefined ? safetyMode : state.safetyMode;
+      const nextProgramState = programState !== undefined ? programState : state.programState;
 
       // Hardware is in a stop state if safety mode is 3 (Protective), 4 (Recovery), 6 (System E-Stop), or 7 (Robot E-Stop)
       const hardwareStopDetected = nextSafetyMode === 3 || nextSafetyMode === 4 || nextSafetyMode === 6 || nextSafetyMode === 7;
@@ -322,6 +326,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
           safetyMode: nextSafetyMode,
           robotMode: nextRobotMode,
           isEStopActive: nextEStopActive,
+          programState: nextProgramState,
           loadedProgram: loadedProgram !== undefined ? loadedProgram : state.loadedProgram,
           isTargetDirty: false,
           isMoving: false
@@ -358,6 +363,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
             safetyMode: nextSafetyMode,
             robotMode: nextRobotMode,
             isEStopActive: nextEStopActive,
+            programState: nextProgramState,
             loadedProgram: loadedProgram !== undefined ? loadedProgram : state.loadedProgram,
             isTargetDirty: false,
             isMoving: false,
@@ -377,6 +383,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         safetyMode: nextSafetyMode,
         robotMode: nextRobotMode,
         isEStopActive: nextEStopActive,
+        programState: nextProgramState,
         loadedProgram: loadedProgram !== undefined ? loadedProgram : state.loadedProgram,
         isTargetDirty: isDirty,
       };
@@ -478,6 +485,25 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       }
     } catch (error) {
       console.error("Failed to unlock protective stop", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Request robot to stop program
+   */
+  stopProgram: async () => {
+    const state = get();
+    if (!state.isConnected) return;
+
+    try {
+      const { api } = await import('@/services/api');
+      const result = await api.stopProgram();
+      if (result.success) {
+        set({ robotMode: 5, programState: 0 }); // Optimistically set to IDLE / STOPPED
+      }
+    } catch (error) {
+      console.error("Failed to stop program", error);
       throw error;
     }
   },
