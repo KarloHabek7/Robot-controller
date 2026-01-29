@@ -192,6 +192,17 @@ def get_local_ips():
         ips.append("localhost")
     return ips
 
+def print_qr_code(url, label):
+    try:
+        import qrcode
+        qr = qrcode.QRCode(version=1, border=1)
+        qr.add_data(url)
+        qr.make(fit=True)
+        print(f"\n   {label} ({url}):")
+        qr.print_ascii(invert=True)
+    except ImportError:
+        print(f"\n   [QR] Could not generate QR for {url} (qrcode library missing)")
+
 def main():
     print("=== UR5 Controller Orchestrator ===")
     
@@ -230,31 +241,32 @@ def main():
     for ip in local_ips:
         print(f"   - http://{ip}:8080")
     
-    
-    # QR Code Logic
-    qr_url = None
     if frontend_tunnel:
         print(f"   - {frontend_tunnel} (Remote)")
-        qr_url = frontend_tunnel
 
-    # Even if no tunnel, we might want to show QR for local IP if easy access is desired
-    if not qr_url and TUNNEL_PROVIDER == "none":
-         # Pick the first non-localhost IP
-        for ip in local_ips:
-            if ip != "localhost":
-                qr_url = f"http://{ip}:8080"
-                break
+    # QR Code Logic
+    print("\n   Scan to open on mobile:")
+    
+    # Always try to show Local Network QR if available
+    local_network_url = None
+    for ip in local_ips:
+        if ip != "localhost":
+            local_network_url = f"http://{ip}:8080"
+            break
+    
+    if TUNNEL_PROVIDER == "none":
+        if local_network_url:
+            print_qr_code(local_network_url, "Local Network")
+        else:
+            print_qr_code("http://localhost:8080", "Localhost")
+    elif TUNNEL_PROVIDER == "cloudflare":
+        # Print both Local and Remote
+        if local_network_url:
+            print_qr_code(local_network_url, "Local Network")
+        
+        if frontend_tunnel:
+            print_qr_code(frontend_tunnel, "Cloudflare Remote")
 
-    if qr_url:
-        try:
-            import qrcode
-            qr = qrcode.QRCode(version=1, border=1)
-            qr.add_data(qr_url)
-            qr.make(fit=True)
-            print(f"\n   Scan to open on mobile ({qr_url}):")
-            qr.print_ascii(invert=True)
-        except ImportError:
-            pass
     print("="*50 + "\n")
 
 
