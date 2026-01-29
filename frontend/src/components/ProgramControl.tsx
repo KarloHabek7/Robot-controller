@@ -2,16 +2,18 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Play, Square, RefreshCw, Pause, FileCode, CheckCircle2, Search, X } from 'lucide-react';
+import { Play, Square, RefreshCw, Pause, FileCode, CheckCircle2, Search, X, PlayCircle } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from "react-i18next";
 import { api } from '@/services/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { useRobotStore } from '@/stores/robotStore';
 
 const ProgramControl = () => {
   const { t } = useTranslation();
+  const loadedProgram = useRobotStore(state => state.loadedProgram);
   const [programName, setProgramName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [programs, setPrograms] = useState<string[]>([]);
@@ -63,12 +65,20 @@ const ProgramControl = () => {
     }
   };
 
-  const handlePause = async () => {
+  const handlePauseResume = async () => {
     setIsLoading(true);
     try {
-      await api.pauseProgram();
-      setStatus('paused');
-      toast.info(t('programs.paused'));
+      if (status === 'paused') {
+        // Resume - call play without loading
+        await api.resumeProgram();
+        setStatus('running');
+        toast.success(t('programs.resume') + 'd');
+      } else {
+        // Pause
+        await api.pauseProgram();
+        setStatus('paused');
+        toast.info(t('programs.paused'));
+      }
     } catch (error) {
       toast.error(t('errors.commandFailed'));
     } finally {
@@ -114,6 +124,14 @@ const ProgramControl = () => {
                   t('programs.stopped')}
             </span>
           </div>
+          {loadedProgram && (
+            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/30 rounded-full shadow-sm">
+              <FileCode className="h-3 w-3 text-primary" />
+              <span className="text-[10px] font-bold text-primary uppercase tracking-tight max-w-[150px] truncate">
+                {loadedProgram.split('/').pop()?.replace('.urp', '') || loadedProgram}
+              </span>
+            </div>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -264,13 +282,27 @@ const ProgramControl = () => {
         {/* Global Control Buttons */}
         <div className="pt-2 grid grid-cols-2 gap-3">
           <Button
-            onClick={handlePause}
-            disabled={status !== 'running' || isLoading}
+            onClick={handlePauseResume}
+            disabled={status === 'stopped' || isLoading}
             variant="outline"
-            className="h-12 font-bold border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 shadow-sm transition-all active:scale-95"
+            className={cn(
+              "h-12 font-bold shadow-sm transition-all active:scale-95",
+              status === 'paused'
+                ? "border-green-500/30 hover:bg-green-500/10 hover:text-green-600 dark:hover:text-green-400"
+                : "border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+            )}
           >
-            <Pause className="h-4 w-4 mr-2" />
-            {t('programs.pause')}
+            {status === 'paused' ? (
+              <>
+                <PlayCircle className="h-4 w-4 mr-2" />
+                {t('programs.resume')}
+              </>
+            ) : (
+              <>
+                <Pause className="h-4 w-4 mr-2" />
+                {t('programs.pause')}
+              </>
+            )}
           </Button>
 
           <Button

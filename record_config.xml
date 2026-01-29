@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<rtde_config>
+  <recipe key="state">
+    <field name="timestamp" type="DOUBLE"/>
+    <field name="actual_q" type="VECTOR6D"/>
+    <field name="actual_TCP_pose" type="VECTOR6D"/>
+    <field name="robot_mode" type="INT32"/>
+    <field name="safety_mode" type="INT32"/>
+    <field name="speed_scaling" type="DOUBLE"/>
+    <field name="target_speed_fraction" type="DOUBLE"/>
+  </recipe>
+
+  <recipe key="set_speed">
+    <field name="speed_slider_mask" type="UINT32"/>
+    <field name="speed_slider_fraction" type="DOUBLE"/>
+  </recipe>
+</rtde_config>

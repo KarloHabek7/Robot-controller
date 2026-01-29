@@ -55,7 +55,8 @@ const RobotControl = () => {
         state.tcp_offset,
         state.speed_slider,
         state.safety_mode,
-        state.robot_mode
+        state.robot_mode,
+        state.loaded_program
       );
     });
 
@@ -76,9 +77,10 @@ const RobotControl = () => {
       try {
         const result = await api.connectRobot(host || "192.168.15.130", port || 30002);
         if (result.success) {
-          setConnectionStatus(true, host, port);
+          setConnectionStatus(true, host, port, result.speed_control_supported);
           toast.success(t('auth.loginSuccess'));
         }
+
       } catch (error) {
         toast.error(t('errors.connectionFailed'));
       }

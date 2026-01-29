@@ -157,7 +157,7 @@ class ApiClient {
 
     // Robot connection endpoints
     async connectRobot(host: string, port: number) {
-        return this.request<{ success: boolean; message: string }>(
+        return this.request<{ success: boolean; message: string; speed_control_supported: boolean }>(
             '/api/robot/connect',
             {
                 method: 'POST',
@@ -240,6 +240,15 @@ class ApiClient {
     async pauseProgram() {
         return this.request<{ success: boolean; command: string; timestamp: string }>(
             '/api/robot/program/pause',
+            {
+                method: 'POST',
+            }
+        );
+    }
+
+    async resumeProgram() {
+        return this.request<{ success: boolean; command: string; timestamp: string }>(
+            '/api/robot/program/resume',
             {
                 method: 'POST',
             }

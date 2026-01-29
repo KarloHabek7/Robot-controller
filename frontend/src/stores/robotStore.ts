@@ -100,6 +100,7 @@ interface RobotState {
   directControlEnabled: boolean;
   safetyMode: number;
   robotMode: number;
+  loadedProgram: string | null;
 
   // === ACTIONS ===
   setActiveControlMode: (mode: ControlMode) => void;
@@ -131,7 +132,7 @@ interface RobotState {
   setDirectControlEnabled: (enabled: boolean) => void;
 
   // Sync state
-  syncActualState: (joints: number[], tcpPose: number[], tcpOffset?: number[], speed?: number, safetyMode?: number, robotMode?: number) => void;
+  syncActualState: (joints: number[], tcpPose: number[], tcpOffset?: number[], speed?: number, safetyMode?: number, robotMode?: number, loadedProgram?: string | null) => void;
 
   resetTargetToActual: () => void;
   clearSafetyStatus: () => void;
@@ -183,6 +184,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   directControlEnabled: false,
   safetyMode: -1,
   robotMode: -1,
+  loadedProgram: null,
 
   // === ACTIONS ===
 
@@ -292,7 +294,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    * Does not affect target state
    * Updates isTargetDirty based on comparison with current target
    */
-  syncActualState: (joints: number[], tcpPose: number[], tcpOffset: number[] = [0, 0, 0, 0, 0, 0], speed?: number, safetyMode?: number, robotMode?: number) => {
+  syncActualState: (joints: number[], tcpPose: number[], tcpOffset: number[] = [0, 0, 0, 0, 0, 0], speed?: number, safetyMode?: number, robotMode?: number, loadedProgram?: string | null) => {
     set((state) => {
       // Convert speed from 0.0-1.0 (robot) to 0-100 (UI)
       const robotSpeedValue = speed !== undefined ? Math.round(speed * 100) : state.robotSpeed;
@@ -319,6 +321,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
           safetyMode: nextSafetyMode,
           robotMode: nextRobotMode,
           isEStopActive: nextEStopActive,
+          loadedProgram: loadedProgram !== undefined ? loadedProgram : state.loadedProgram,
           isTargetDirty: false,
           isMoving: false
         };
@@ -354,6 +357,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
             safetyMode: nextSafetyMode,
             robotMode: nextRobotMode,
             isEStopActive: nextEStopActive,
+            loadedProgram: loadedProgram !== undefined ? loadedProgram : state.loadedProgram,
             isTargetDirty: false,
             isMoving: false,
             movementProgress: 100
@@ -372,6 +376,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
         safetyMode: nextSafetyMode,
         robotMode: nextRobotMode,
         isEStopActive: nextEStopActive,
+        loadedProgram: loadedProgram !== undefined ? loadedProgram : state.loadedProgram,
         isTargetDirty: isDirty,
       };
     });
@@ -402,14 +407,17 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   /**
    * Update connection status
    */
-  setConnectionStatus: (isConnected: boolean, host: string = null, port: number = null, speedControlSupported: boolean = false) => {
-    set({
+  setConnectionStatus: (isConnected: boolean, host: string = null, port: number = null, speedControlSupported?: boolean) => {
+    set((state) => ({
       isConnected,
-      host,
-      port,
-      speedControlSupported: isConnected ? speedControlSupported : false
-    });
+      host: host !== undefined ? host : state.host,
+      port: port !== undefined ? port : state.port,
+      speedControlSupported: !isConnected
+        ? false
+        : (speedControlSupported !== undefined ? speedControlSupported : state.speedControlSupported)
+    }));
   },
+
 
   /**
    * Set TCP visualization mode

@@ -9,3 +9,5 @@ passlib[bcrypt]
 bcrypt==4.0.1
 pyngrok
 qrcode[pil]
+git+https://github.com/UniversalRobots/RTDE_Python_Client_Library.git@main
+paramiko

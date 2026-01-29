@@ -67,6 +67,7 @@ class ConnectRequest(BaseModel):
 class ConnectResponse(BaseModel):
     success: bool
     message: str
+    speed_control_supported: bool = False
 
 class CommandRequest(BaseModel):
     axis: str
@@ -112,7 +113,11 @@ async def connect_robot(
 ):
     success = await robot_client.connect(request.host, request.port)
     if success:
-        return ConnectResponse(success=True, message="Connected to robot")
+        return ConnectResponse(
+            success=True, 
+            message="Connected to robot",
+            speed_control_supported=robot_client.rtde_connected
+        )
     else:
         raise HTTPException(status_code=500, detail="Failed to connect to robot")
 
@@ -245,22 +250,25 @@ async def start_program(
     request: ProgramRequest,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
-):
+):  
     # 1. Load the program
-    load_success = await robot_client.load_program(request.program_name)
+    load_success, load_msg = await robot_client.load_program(request.program_name)
     if not load_success:
         await run_in_threadpool(log_command, current_user.id, f"Load Program {request.program_name}", False, session)
-        raise HTTPException(status_code=500, detail=f"Failed to load program {request.program_name}")
+        raise HTTPException(status_code=500, detail=load_msg or f"Failed to load program {request.program_name}")
     
-    # 2. Play the program
-    play_success = await robot_client.play_program()
+    # 2. Small delay to ensure dashboard is ready
+    await asyncio.sleep(0.5)
+    
+    # 3. Play the program
+    play_success, play_msg = await robot_client.play_program()
     
     await run_in_threadpool(log_command, current_user.id, f"Start Program {request.program_name}", play_success, session)
     
     if play_success:
         return CommandResponse(success=True, command=f"load {request.program_name} + play", timestamp=datetime.utcnow().isoformat())
     else:
-        raise HTTPException(status_code=500, detail="Failed to start program playback")
+        raise HTTPException(status_code=500, detail=play_msg or "Failed to start program playback")
 
 @router.post("/program/stop", response_model=CommandResponse)
 async def stop_program(
@@ -289,6 +297,21 @@ async def pause_program(
         return CommandResponse(success=True, command="dashboard pause", timestamp=datetime.utcnow().isoformat())
     else:
         raise HTTPException(status_code=500, detail="Not connected to robot/dashboard")
+
+@router.post("/program/resume", response_model=CommandResponse)
+async def resume_program(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    # Resume by calling play without loading
+    success, msg = await robot_client.play_program()
+    
+    await run_in_threadpool(log_command, current_user.id, "Resume Program", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command="dashboard play (resume)", timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail=msg or "Failed to resume program")
 
 @router.post("/emergency-stop", response_model=CommandResponse)
 async def emergency_stop(

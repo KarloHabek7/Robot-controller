@@ -16,17 +16,19 @@ export const SpeedControl = () => {
     const [isChanging, setIsChanging] = useState(false);
     const lastCommitTime = useRef<number>(0);
 
-    // Don't render if disconnected or if robot doesn't support speed control
-    if (!isConnected || !speedControlSupported) {
-        return null;
-    }
-
     // Sync local value with store when not changing and after a grace period from last commit
     useEffect(() => {
         if (!isChanging && Date.now() - lastCommitTime.current > 1000) {
             setLocalValue(robotSpeed);
         }
     }, [robotSpeed, isChanging]);
+
+    // Don't render if disconnected or if robot doesn't support speed control
+    // This MUST be after all hooks (useState, useEffect, etc.) to comply with React's Rules of Hooks
+    if (!isConnected || !speedControlSupported) {
+        return null;
+    }
+
 
     const handleSpeedChange = (vals: number[]) => {
         setLocalValue(vals[0]);
