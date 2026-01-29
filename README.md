@@ -25,17 +25,15 @@ This will:
 ## Access
 ### Local & Network (Recommended for development)
 To access the app on your local network/wifi without any internet connection:
-1. Set `TUNNEL_PROVIDER=none` in `.env`.
-2. Run `python run.py`.
-3. Scan the QR code printed in the terminal or use the `http://192.168.x.x:8080` link.
+1. Run `python run.py` (or `python run.py none`).
+2. Scan the QR code printed in the terminal or use the `http://192.168.x.x:8080` link.
 
 ### Remote Access (HTTPS)
 To enable secure remote access from anywhere using **Cloudflare Tunnel**:
 
 1. Download [cloudflared](https://github.com/cloudflare/cloudflared/releases) and place `cloudflared.exe` in the root folder.
-2. Set `TUNNEL_PROVIDER=cloudflare` in `.env`.
-3. Run `python run.py`.
-4. Scan the QR code or use the `https://....trycloudflare.com` link.
+2. Run `python run.py cloudflare`.
+3. Scan the QR code or use the `https://....trycloudflare.com` link.
 
 ## Project Structure
 

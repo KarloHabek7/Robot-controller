@@ -14,16 +14,11 @@ FRONTEND_DIR = "frontend"
 VENV_DIR = ".venv"
 REQUIREMENTS_FILE = os.path.join(BACKEND_DIR, "requirements.txt")
 # Tunnel Configuration
-TUNNEL_PROVIDER = os.environ.get("TUNNEL_PROVIDER", "none").lower()
+# Options: "none", "cloudflare"
+DEFAULT_TUNNEL_PROVIDER = "none"
 
-
-
-# Try to load from .env file
-if os.path.exists(".env"):
-    with open(".env", "r") as f:
-        for line in f:
-            if line.startswith("TUNNEL_PROVIDER="):
-                TUNNEL_PROVIDER = line.split("=", 1)[1].strip().strip('"').strip("'").lower()
+# Allow overriding via command line argument (e.g., python run.py cloudflare)
+TUNNEL_PROVIDER = sys.argv[1].lower() if len(sys.argv) > 1 else DEFAULT_TUNNEL_PROVIDER
 
 print(f"[Config] Tunnel provider: {TUNNEL_PROVIDER}")
 

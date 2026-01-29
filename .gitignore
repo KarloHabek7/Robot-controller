@@ -4,7 +4,6 @@ database.db
 __pycache__/
 .venv/
 *.egg-info/
-.env*
 
 # Frontend
 node_modules/
