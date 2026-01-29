@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { useRobotStore } from '@/stores/robotStore';
 import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { toast } from 'sonner';
-import { Shield, ShieldAlert, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { Shield, ShieldAlert, RefreshCcw, AlertTriangle, Play, Unlock } from 'lucide-react';
 import { Button } from './ui/button';
 import { useTranslation } from 'react-i18next';
 
@@ -437,6 +437,7 @@ const Robot3DViewer = () => {
     safetyMode,
     robotMode,
     clearSafetyStatus,
+    unlockProtectiveStop,
     isMoving
   } = useRobotStore();
   const { t } = useTranslation();
@@ -495,27 +496,39 @@ const Robot3DViewer = () => {
 
       {/* Top Left Status & Reset Actions */}
       <div className="absolute top-4 left-4 flex flex-col gap-2">
-        {isConnected && safetyInfo && (
-          <div className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md shadow-lg transition-all border-border/40",
-            safetyInfo.bg
-          )}>
-            <safetyInfo.icon className={cn("w-3.5 h-3.5", safetyInfo.color)} />
-            <span className={cn("text-[10px] font-black uppercase tracking-wider", safetyInfo.color)}>
-              {safetyInfo.label}
-            </span>
-          </div>
-        )}
+        <div className="flex gap-2">
+          {isConnected && safetyInfo && (
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md shadow-lg transition-all border-border/40",
+              safetyInfo.bg
+            )}>
+              <safetyInfo.icon className={cn("w-3.5 h-3.5", safetyInfo.color)} />
+              <span className={cn("text-[10px] font-black uppercase tracking-wider", safetyInfo.color)}>
+                {safetyInfo.label}
+              </span>
+            </div>
+          )}
 
-        {(safetyMode === 3 || isMoving) && isConnected && (
+          {/* Program Running Badge */}
+          {isConnected && robotMode === 7 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md shadow-lg transition-all border-blue-500/40 bg-blue-500/10 animate-pulse">
+              <Play className="w-3.5 h-3.5 text-blue-500 fill-blue-500/20" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-500">
+                {t('safety.programRunning')}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {isConnected && (
           <Button
             onClick={() => {
               clearSafetyStatus();
-              toast.info('Movement state cleared');
+              toast.info('UI State Cleared');
             }}
             variant="outline"
             size="sm"
-            className="h-8 bg-background/60 backdrop-blur-md border-border/40 text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/20 hover:text-primary hover:border-primary/50"
+            className="h-8 w-fit bg-background/60 backdrop-blur-md border-border/40 text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/20 hover:text-primary hover:border-primary/50"
           >
             <RefreshCcw className="w-3 h-3" />
             {t('safety.resetUI')}
@@ -530,7 +543,23 @@ const Robot3DViewer = () => {
           <div className="bg-red-500/90 text-white px-8 py-4 rounded-2xl shadow-2xl flex flex-col items-center gap-2 backdrop-blur-xl border border-white/20">
             <AlertTriangle className="w-12 h-12" />
             <h2 className="text-xl font-black uppercase tracking-[0.2em]">{t('safety.protectiveStop')}</h2>
-            <p className="text-[10px] opacity-70 font-bold uppercase tracking-widest">{t('safety.acknowledgeOnController')}</p>
+            <p className="text-[10px] opacity-70 font-bold uppercase tracking-widest mb-2">{t('safety.acknowledgeOnController')}</p>
+            
+            <Button
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  await unlockProtectiveStop();
+                  toast.success('Protective stop unlocking...');
+                } catch (err: any) {
+                  toast.error(err.message || 'Failed to unlock protective stop');
+                }
+              }}
+              className="mt-2 bg-white text-red-600 hover:bg-white/90 font-black uppercase tracking-widest gap-2 pointer-events-auto shadow-xl"
+            >
+              <Unlock className="w-4 h-4" />
+              {t('safety.unlockProtectiveStop')}
+            </Button>
           </div>
         </div>
       )}

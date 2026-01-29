@@ -304,6 +304,16 @@ class ApiClient {
             }
         );
     }
+
+    async unlockProtectiveStop() {
+        return this.request<{ success: boolean; command: string; timestamp: string }>(
+            '/api/robot/unlock-protective-stop',
+            {
+                method: 'POST',
+                body: JSON.stringify({})
+            }
+        );
+    }
 }
 
 export const api = new ApiClient(API_BASE_URL);

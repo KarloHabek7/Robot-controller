@@ -213,6 +213,8 @@
         "robotStop": "Robot E-Stop",
         "unknown": "Unknown Status",
         "resetUI": "Reset UI State",
-        "acknowledgeOnController": "Acknowledge on Robot Controller"
+        "acknowledgeOnController": "Acknowledge on Robot Controller",
+        "unlockProtectiveStop": "Unlock Protective Stop",
+        "programRunning": "Program Running"
     }
 }

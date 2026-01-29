@@ -24,7 +24,10 @@ const JointControlTable = () => {
     resetTargetToActual,
     directControlEnabled,
     setDirectControlEnabled,
+    robotMode,
   } = useRobotStore();
+
+  const isProgramRunning = robotMode === 7;
 
   // Local state for global increment override
   const [incrementOverride, setIncrementOverride] = useState<string>("5.0");
@@ -119,7 +122,7 @@ const JointControlTable = () => {
                   size="icon"
                   className="h-4 w-4 sm:h-5 sm:w-5 rounded-full hover:bg-white/10"
                   onClick={() => setIncrementOverride((Math.max(0.1, parseFloat(incrementOverride) - 0.5)).toFixed(1))}
-                  disabled={isMoving || isEStopActive}
+                  disabled={isMoving || isEStopActive || isProgramRunning}
                 >
                   <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 </Button>
@@ -129,7 +132,7 @@ const JointControlTable = () => {
                     value={incrementOverride}
                     onChange={(e) => setIncrementOverride(e.target.value)}
                     className="h-4 sm:h-5 border-0 bg-transparent p-0 text-[10px] sm:text-[11px] font-black text-center focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    disabled={isMoving || isEStopActive}
+                    disabled={isMoving || isEStopActive || isProgramRunning}
                   />
                 </div>
                 <Button
@@ -137,7 +140,7 @@ const JointControlTable = () => {
                   size="icon"
                   className="h-4 w-4 sm:h-5 sm:w-5 rounded-full hover:bg-white/10"
                   onClick={() => setIncrementOverride((parseFloat(incrementOverride) + 0.5).toFixed(1))}
-                  disabled={isMoving || isEStopActive}
+                  disabled={isMoving || isEStopActive || isProgramRunning}
                 >
                   <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 </Button>
@@ -154,6 +157,7 @@ const JointControlTable = () => {
                 id="direct-control"
                 checked={directControlEnabled}
                 onCheckedChange={setDirectControlEnabled}
+                disabled={isProgramRunning}
                 className="scale-[0.6] sm:scale-75 origin-left"
               />
             </div>
@@ -165,7 +169,7 @@ const JointControlTable = () => {
               variant="outline"
               size="sm"
               onClick={handleReset}
-              disabled={isMoving || isEStopActive}
+              disabled={isMoving || isEStopActive || isProgramRunning}
               className="gap-1 h-6 sm:h-7 px-1.5 sm:px-2 text-[9px] sm:text-xs"
             >
               <RotateCcw className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
@@ -177,7 +181,7 @@ const JointControlTable = () => {
                 variant="default"
                 size="sm"
                 onClick={handleApply}
-                disabled={isMoving || isEStopActive}
+                disabled={isMoving || isEStopActive || isProgramRunning}
                 className="gap-1 h-6 sm:h-7 px-1.5 sm:px-2 text-[9px] sm:text-xs bg-primary hover:bg-primary/90"
               >
                 {isMoving ? (
@@ -211,7 +215,7 @@ const JointControlTable = () => {
               className={`flex flex-col sm:flex-nowrap sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-all ${isDirty
                 ? 'bg-primary/5 border-primary/50 shadow-sm'
                 : 'bg-secondary/10 border-border/50'
-                } ${(isMoving || isEStopActive) ? 'opacity-50 pointer-events-none' : ''}`}
+                } ${(isMoving || isEStopActive || isProgramRunning) ? 'opacity-50 pointer-events-none' : ''}`}
             >
               {/* Row 1: Controls and Info */}
               <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
@@ -228,7 +232,7 @@ const JointControlTable = () => {
                     size="icon"
                     className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
                     onClick={() => handleIncrement(joint.id, '-')}
-                    disabled={isMoving}
+                    disabled={isMoving || isProgramRunning}
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </Button>
@@ -237,7 +241,7 @@ const JointControlTable = () => {
                     size="icon"
                     className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
                     onClick={() => handleIncrement(joint.id, '+')}
-                    disabled={isMoving}
+                    disabled={isMoving || isProgramRunning}
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </Button>
@@ -263,7 +267,7 @@ const JointControlTable = () => {
                         type="number"
                         value={targetAngle.toFixed(2)}
                         onChange={(e) => handleInputChange(joint.id, e.target.value)}
-                        disabled={isMoving}
+                        disabled={isMoving || isProgramRunning}
                         className="border-0 p-0 h-5 sm:h-6 text-xs sm:text-sm text-center focus-visible:ring-0 font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                       <span className="text-[9px] sm:text-[10px] text-muted-foreground ml-0.5">°</span>
@@ -282,7 +286,7 @@ const JointControlTable = () => {
                   max={joint.max}
                   step={0.1}
                   className="w-full"
-                  disabled={isMoving}
+                  disabled={isMoving || isProgramRunning}
                 />
               </div>
 

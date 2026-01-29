@@ -729,6 +729,21 @@ class RobotTCPClient:
             return result.replace("Loaded program:", "").strip()
         return result
 
+    async def unlock_protective_stop(self) -> tuple[bool, str]:
+        """Unlock protective stop via Dashboard server."""
+        if not self.dashboard_connected:
+            return False, "Not connected to Dashboard"
+        
+        result = await self.send_dashboard_command("unlock protective stop")
+        if result is None:
+            return False, "No response from Dashboard"
+        
+        low_res = result.lower()
+        if "protective stop releasing" in low_res or "unlocking" in low_res:
+            return True, result
+        
+        return False, result
+
 
 # Global robot client instance
 robot_client = RobotTCPClient()

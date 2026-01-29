@@ -213,6 +213,8 @@
         "robotStop": "Robotski E-Stop",
         "unknown": "Nepoznat Status",
         "resetUI": "Resetiraj UI",
-        "acknowledgeOnController": "Potvrdite na kontroleru robota"
+        "acknowledgeOnController": "Potvrdite na kontroleru robota",
+        "unlockProtectiveStop": "Otključaj Protektivni Stop",
+        "programRunning": "Program u izvođenju"
     }
 }

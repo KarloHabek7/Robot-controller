@@ -418,3 +418,17 @@ async def send_raw_command(
         return CommandResponse(success=True, command=request.command, timestamp=datetime.utcnow().isoformat())
     else:
         raise HTTPException(status_code=500, detail="Not connected to robot")
+
+@router.post("/unlock-protective-stop", response_model=CommandResponse)
+async def unlock_protective_stop(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    success, msg = await robot_client.unlock_protective_stop()
+    
+    await run_in_threadpool(log_command, current_user.id, "Unlock Protective Stop", success, session)
+    
+    if success:
+        return CommandResponse(success=True, command="unlock protective stop", timestamp=datetime.utcnow().isoformat())
+    else:
+        raise HTTPException(status_code=500, detail=msg or "Failed to unlock protective stop")

@@ -138,6 +138,7 @@ interface RobotState {
   clearSafetyStatus: () => void;
   commitTargetJoints: () => void;
   commitTargetTcp: () => void;
+  unlockProtectiveStop: () => Promise<void>;
 }
 
 // ============================================================================
@@ -459,5 +460,25 @@ export const useRobotStore = create<RobotState>((set, get) => ({
    */
   setDirectControlEnabled: (directControlEnabled: boolean) => {
     set({ directControlEnabled });
+  },
+
+  /**
+   * Request robot to unlock protective stop
+   */
+  unlockProtectiveStop: async () => {
+    const state = get();
+    if (!state.isConnected) return;
+
+    try {
+      const { api } = await import('@/services/api');
+      const result = await api.unlockProtectiveStop();
+      if (result.success) {
+        // Optimistically clear the local E-Stop latch
+        set({ isEStopActive: false, safetyMode: 1 });
+      }
+    } catch (error) {
+      console.error("Failed to unlock protective stop", error);
+      throw error;
+    }
   },
 }));

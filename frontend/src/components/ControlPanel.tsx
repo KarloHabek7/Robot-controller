@@ -120,7 +120,10 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
     setCoordinateMode,
     directControlEnabled,
     setDirectControlEnabled,
+    robotMode,
   } = useRobotStore();
+
+  const isProgramRunning = robotMode === 7;
 
   // --- UI Converters ---
   const toUI = (pose: number[]) => [
@@ -251,7 +254,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
           isDirty
             ? "bg-primary/5 border-primary/50 shadow-sm"
             : "bg-secondary/10 border-border/50",
-          (isMoving || isEStopActive) && "opacity-50 pointer-events-none"
+          (isMoving || isEStopActive || isProgramRunning) && "opacity-50 pointer-events-none"
         )}
       >
         {/* Left: Label and Buttons Group */}
@@ -386,7 +389,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
             variant="ghost"
             size="sm"
             onClick={handleReset}
-            disabled={isMoving || isEStopActive}
+            disabled={isMoving || isEStopActive || isProgramRunning}
             className="h-7 px-1.5 sm:px-2 rounded-lg text-[10px] sm:text-xs text-muted-foreground hover:text-foreground font-bold shrink-0"
           >
             <ResetIcon className={cn("w-3 h-3 sm:w-3.5 sm:h-3.5", "sm:mr-1")} />
@@ -398,7 +401,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
               variant="default"
               size="sm"
               onClick={handleApply}
-              disabled={isMoving || isEStopActive}
+              disabled={isMoving || isEStopActive || isProgramRunning}
               className="gap-1.5 sm:gap-2 h-7 px-2 sm:px-3 text-[10px] sm:text-xs bg-primary hover:bg-primary/90"
             >
               {isMoving ? (
@@ -423,7 +426,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
         {/* --- POSITION CARD --- */}
         <div className={cn(
           "relative flex flex-col bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:shadow-xl hover:bg-card/50",
-          isEStopActive && "opacity-60 grayscale-[0.5] pointer-events-none"
+          (isEStopActive || isProgramRunning) && "opacity-60 grayscale-[0.5] pointer-events-none"
         )}>
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-blue-500/40 via-blue-500 to-transparent rounded-t-2xl opacity-50" />
 
@@ -532,7 +535,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
                       >
                         <Button
                           onClick={() => handleJog(btn.axis, btn.dir)}
-                          disabled={isMoving}
+                          disabled={isMoving || isProgramRunning}
                           size="icon"
                           className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full font-black text-[8px] sm:text-[10px] active:scale-90 transition-all shadow-lg backdrop-blur-md border ${btn.colorClass}`}
                         >
@@ -550,7 +553,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
         {/* --- ROTATION CARD --- */}
         <div className={cn(
           "relative flex flex-col bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:shadow-xl hover:bg-card/50",
-          isEStopActive && "opacity-60 grayscale-[0.5] pointer-events-none"
+          (isEStopActive || isProgramRunning) && "opacity-60 grayscale-[0.5] pointer-events-none"
         )}>
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-emerald-500/40 via-emerald-500 to-transparent rounded-t-2xl opacity-50" />
 
@@ -659,7 +662,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
                       >
                         <Button
                           onClick={() => handleJog(btn.axis, btn.dir)}
-                          disabled={isMoving}
+                          disabled={isMoving || isProgramRunning}
                           size="icon"
                           className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full font-black text-[8px] sm:text-[10px] active:scale-90 transition-all shadow-lg backdrop-blur-md border ${btn.colorClass}`}
                         >
