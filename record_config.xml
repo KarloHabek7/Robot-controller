@@ -8,6 +8,7 @@
     <field name="safety_mode" type="INT32"/>
     <field name="speed_scaling" type="DOUBLE"/>
     <field name="target_speed_fraction" type="DOUBLE"/>
+    <field name="output_runtime_state" type="UINT32"/>
   </recipe>
 
   <recipe key="set_speed">

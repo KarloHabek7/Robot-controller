@@ -12,7 +12,8 @@ import ConnectionStatus from '@/components/ConnectionStatus';
 import { useRobotStore } from '@/stores/robotStore';
 import { api } from "@/services/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Box, Settings2, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Box, Settings2, Target, RefreshCcw } from "lucide-react";
 import { ControlModeSwitcher } from "@/components/ControlModeSwitcher";
 import EmergencyStop from "@/components/EmergencyStop";
 import SpeedControl from "@/components/SpeedControl";
@@ -30,7 +31,8 @@ const RobotControl = () => {
     setActiveControlMode,
     syncActualState,
     tcpVisualizationMode,
-    setTCPVisualizationMode
+    setTCPVisualizationMode,
+    clearSafetyStatus
   } = useRobotStore();
   const { t } = useTranslation();
 
@@ -122,14 +124,30 @@ const RobotControl = () => {
             <CardContent className="flex-1 p-0 relative group min-h-0">
               <Robot3DViewer />
 
-              {/* Top-Right Status Badge Overlay */}
-              <div className="absolute top-3 right-3 sm:top-6 sm:right-6 pointer-events-none">
-                <div className="bg-background/60 backdrop-blur-md border border-border/50 rounded-full px-2 py-0.5 sm:px-3 sm:py-1 flex items-center gap-1.5 sm:gap-2 shadow-lg">
-                  <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'}`} />
-                  <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-foreground/70 whitespace-nowrap">
-                    {isConnected ? t('robot.realTimeStream') : t('robot.offline')}
-                  </span>
-                </div>
+              {/* Top-Right Action Overlay */}
+              <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-20">
+                {isConnected && (
+                  <Button
+                    onClick={() => {
+                      clearSafetyStatus();
+                      toast.info('UI State Cleared');
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 bg-background/60 backdrop-blur-md border-border/40 text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/20 hover:text-primary hover:border-primary/50 shadow-lg"
+                  >
+                    <RefreshCcw className="w-3 h-3" />
+                    {t('safety.resetUI')}
+                  </Button>
+                )}
+                {!isConnected && (
+                  <div className="bg-background/60 backdrop-blur-md border border-border/50 rounded-full px-2 py-0.5 sm:px-3 sm:py-1 flex items-center gap-1.5 sm:gap-2 shadow-lg pointer-events-none">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-destructive" />
+                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-foreground/70 whitespace-nowrap">
+                      {t('robot.offline')}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Bottom Overlay: TCP Info & Switcher */}

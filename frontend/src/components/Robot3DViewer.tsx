@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { useRobotStore } from '@/stores/robotStore';
 import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { toast } from 'sonner';
-import { Shield, ShieldAlert, RefreshCcw, AlertTriangle, Play, Unlock, Square } from 'lucide-react';
+import { Shield, ShieldAlert, RefreshCcw, AlertTriangle, Play, Unlock, Square, Pause, PlayCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { useTranslation } from 'react-i18next';
 
@@ -438,6 +438,9 @@ const Robot3DViewer = () => {
     robotMode,
     clearSafetyStatus,
     unlockProtectiveStop,
+    startProgram,
+    pauseProgram,
+    resumeProgram,
     stopProgram,
     programState,
     isMoving
@@ -512,48 +515,92 @@ const Robot3DViewer = () => {
           )}
 
           {/* Program Running Badge & Stop Action */}
-          {isConnected && programState === 1 && (
-            <div className="flex items-center gap-1.5 p-1 rounded-full border backdrop-blur-md shadow-lg transition-all border-blue-500/40 bg-blue-500/10">
-              <div className="flex items-center gap-2 px-2 py-0.5 animate-pulse">
-                <Play className="w-3 h-3 text-blue-500 fill-blue-500/20" />
-                <span className="text-[9px] font-black uppercase tracking-wider text-blue-500">
-                  {t('safety.programRunning')}
+          {isConnected && (programState === 1 || programState === 2) && (
+            <div className={cn(
+              "flex items-center gap-1.5 p-1 rounded-full border backdrop-blur-md shadow-lg transition-all",
+              programState === 1 ? "border-blue-500/40 bg-blue-500/10" : "border-amber-500/40 bg-amber-500/10"
+            )}>
+              <div className={cn(
+                "flex items-center gap-2 px-2 py-0.5",
+                programState === 1 && "animate-pulse"
+              )}>
+                {programState === 1 ? (
+                  <Play className="w-3 h-3 text-blue-500 fill-blue-500/20" />
+                ) : (
+                  <Pause className="w-3 h-3 text-amber-500 fill-amber-500/20" />
+                )}
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-wider",
+                  programState === 1 ? "text-blue-500" : "text-amber-500"
+                )}>
+                  {programState === 1 ? t('programs.running') : t('programs.paused')}
                 </span>
               </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  try {
-                    await stopProgram();
-                    toast.success(t('programs.stopped'));
-                  } catch (err: any) {
-                    toast.error(err.message || 'Failed to stop program');
-                  }
-                }}
-                className="h-6 w-6 rounded-full bg-blue-500 hover:bg-blue-600 text-white border-none shadow-sm"
-              >
-                <Square className="w-2.5 h-2.5 fill-current" />
-              </Button>
+              
+              <div className="flex gap-1">
+                {programState === 1 ? (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await pauseProgram();
+                        toast.info(t('programs.paused'));
+                      } catch (err) {
+                        const msg = err instanceof Error ? err.message : 'Failed to pause program';
+                        toast.error(msg);
+                      }
+                    }}
+                    className="h-6 w-6 rounded-full bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm"
+                    title={t('programs.pause')}
+                  >
+                    <Pause className="w-2.5 h-2.5 fill-current" />
+                  </Button>
+                ) : (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await resumeProgram();
+                        toast.success(t('programs.resume') + 'd');
+                      } catch (err) {
+                        const msg = err instanceof Error ? err.message : 'Failed to resume program';
+                        toast.error(msg);
+                      }
+                    }}
+                    className="h-6 w-6 rounded-full bg-green-500 hover:bg-green-600 text-white border-none shadow-sm"
+                    title={t('programs.resume')}
+                  >
+                    <PlayCircle className="w-2.5 h-2.5 fill-current" />
+                  </Button>
+                )}
+
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      await stopProgram();
+                      toast.success(t('programs.stopped'));
+                    } catch (err) {
+                      const msg = err instanceof Error ? err.message : 'Failed to stop program';
+                      toast.error(msg);
+                    }
+                  }}
+                  className="h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 text-white border-none shadow-sm"
+                  title={t('programs.stop')}
+                >
+                  <Square className="w-2.5 h-2.5 fill-current" />
+                </Button>
+              </div>
             </div>
           )}
         </div>
 
-        {isConnected && (
-          <Button
-            onClick={() => {
-              clearSafetyStatus();
-              toast.info('UI State Cleared');
-            }}
-            variant="outline"
-            size="sm"
-            className="h-8 w-fit bg-background/60 backdrop-blur-md border-border/40 text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-primary/20 hover:text-primary hover:border-primary/50"
-          >
-            <RefreshCcw className="w-3 h-3" />
-            {t('safety.resetUI')}
-          </Button>
-        )}
       </div>
 
       {/* Protective Stop Overlay Warning */}
@@ -571,8 +618,9 @@ const Robot3DViewer = () => {
                 try {
                   await unlockProtectiveStop();
                   toast.success('Protective stop unlocking...');
-                } catch (err: any) {
-                  toast.error(err.message || 'Failed to unlock protective stop');
+                } catch (err) {
+                  const msg = err instanceof Error ? err.message : 'Failed to unlock protective stop';
+                  toast.error(msg);
                 }
               }}
               className="mt-2 bg-white text-red-600 hover:bg-white/90 font-black uppercase tracking-widest gap-2 pointer-events-auto shadow-xl"

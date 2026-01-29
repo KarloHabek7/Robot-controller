@@ -5,6 +5,7 @@ import ftplib
 import os
 import threading
 import paramiko
+import time
 from typing import Optional
 from datetime import datetime
 
@@ -50,6 +51,7 @@ class RobotTCPClient:
         self.robot_mode: int = -1
         self.safety_mode: int = -1
         self.program_state: int = 0  # 0: STOPPED, 1: PLAYING, 2: PAUSED
+        self.program_state_lock_until: float = 0.0
         self.loaded_program: Optional[str] = None
 
         self.ftp_user = os.getenv("ROBOT_SFTP_USER", "root")
@@ -295,8 +297,17 @@ class RobotTCPClient:
                 # Update modes and speed
                 rm = getattr(state, 'robot_mode', None)
                 sm = getattr(state, 'safety_mode', None)
+                rs = getattr(state, 'output_runtime_state', None)
                 if rm is not None: self.robot_mode = rm
                 if sm is not None: self.safety_mode = sm
+                
+                # Map RTDE runtime_state to internal program_state
+                # RTDE: 0=stopped, 1=playing, 2=pausing, 3=paused, 4=resuming
+                # Internal: 0: STOPPED, 1: PLAYING, 2: PAUSED
+                if rs is not None and time.time() > self.program_state_lock_until:
+                    if rs == 0: self.program_state = 0
+                    elif rs in [1, 4]: self.program_state = 1
+                    elif rs in [2, 3]: self.program_state = 2
                 
                 # actual_TCP_pose
                 tcp_pose = getattr(state, 'actual_TCP_pose', None)
@@ -395,39 +406,37 @@ class RobotTCPClient:
         print("[RobotClient] Starting status poller task")
         while self.connected:
             try:
-                if not self.rtde_connected and self.dashboard_connected:
-                    # Poll dashboard for modes if RTDE is down
-                    # We use a combined polling approach to minimize dashboard load
-                    # and avoid desync issues.
-                    
-                    # 1. Robot Mode
-                    mode_resp = await self.send_dashboard_command("robotmode")
-                    if mode_resp and "robotmode:" in mode_resp.lower():
-                        low_mode = mode_resp.lower()
-                        if "running" in low_mode: self.robot_mode = 7
-                        elif "idle" in low_mode: self.robot_mode = 5
-                        elif "power_on" in low_mode: self.robot_mode = 4
-                        elif "power_off" in low_mode: self.robot_mode = 3
-                        elif "booting" in low_mode: self.robot_mode = 2
-                        elif "confirm_safety" in low_mode: self.robot_mode = 1
-                        elif "disconnected" in low_mode: self.robot_mode = 0
+                if self.dashboard_connected:
+                    # 1. Status Polling (Fallback for RTDE)
+                    if not self.rtde_connected:
+                        # 1a. Robot Mode
+                        mode_resp = await self.send_dashboard_command("robotmode")
+                        if mode_resp and "robotmode:" in mode_resp.lower():
+                            low_mode = mode_resp.lower()
+                            if "running" in low_mode: self.robot_mode = 7
+                            elif "idle" in low_mode: self.robot_mode = 5
+                            elif "power_on" in low_mode: self.robot_mode = 4
+                            elif "power_off" in low_mode: self.robot_mode = 3
+                            elif "booting" in low_mode: self.robot_mode = 2
+                            elif "confirm_safety" in low_mode: self.robot_mode = 1
+                            elif "disconnected" in low_mode: self.robot_mode = 0
 
-                    # 2. Program State
-                    prog_resp = await self.send_dashboard_command("programState")
-                    if prog_resp:
-                        low_prog = prog_resp.lower()
-                        if "playing" in low_prog: self.program_state = 1
-                        elif "paused" in low_prog: self.program_state = 2
-                        elif "stopped" in low_prog: self.program_state = 0
-                    
-                    # 3. Safety Status
-                    safety_resp = await self.send_dashboard_command("safetystatus")
-                    if safety_resp and "safetystatus:" in safety_resp.lower():
-                        if "PROTECTIVE_STOP" in safety_resp: self.safety_mode = 3
-                        elif "EMERGENCY_STOP" in safety_resp: self.safety_mode = 4
-                        elif "NORMAL" in safety_resp: self.safety_mode = 1
+                        # 1b. Program State
+                        prog_resp = await self.send_dashboard_command("programState")
+                        if prog_resp:
+                            low_prog = prog_resp.lower()
+                            if "playing" in low_prog: self.program_state = 1
+                            elif "paused" in low_prog: self.program_state = 2
+                            elif "stopped" in low_prog: self.program_state = 0
+                        
+                        # 1c. Safety Status
+                        safety_resp = await self.send_dashboard_command("safetystatus")
+                        if safety_resp and "safetystatus:" in safety_resp.lower():
+                            if "PROTECTIVE_STOP" in safety_resp: self.safety_mode = 3
+                            elif "EMERGENCY_STOP" in safety_resp: self.safety_mode = 4
+                            elif "NORMAL" in safety_resp: self.safety_mode = 1
 
-                    # Also fetch loaded program name
+                    # 2. Program Name (ALWAYS poll this as it's not available in RTDE)
                     self.loaded_program = await self.get_loaded_program()
 
                 await asyncio.sleep(2.0) # Poll every 2 seconds (dashboard is slow)
@@ -596,6 +605,7 @@ class RobotTCPClient:
             
             # Accept loading/loaded responses
             if "loading" in low_res or "loaded" in low_res:
+                self.loaded_program = program_name
                 return True, result
         
         return False, last_result
@@ -655,6 +665,8 @@ class RobotTCPClient:
                 return True, result
 
             if any(x in low_res for x in ["starting", "playing", "started"]):
+                self.program_state = 1
+                self.program_state_lock_until = time.time() + 1.0
                 return True, result
             
             # Retry if we got something else unknown
@@ -704,6 +716,8 @@ class RobotTCPClient:
             
             # Accept pausing/paused responses
             if any(x in low_res for x in ["pausing", "paused"]):
+                self.program_state = 2
+                self.program_state_lock_until = time.time() + 1.0
                 return True, result
             
             # Retry if we got a stale state like "starting", "playing", "loading", "stopped"
@@ -752,6 +766,8 @@ class RobotTCPClient:
             
             # Accept stopped/stopping responses
             if any(x in low_res for x in ["stopped", "stopping"]):
+                self.program_state = 0
+                self.program_state_lock_until = time.time() + 1.0
                 return True, result
             
             # Retry if we got a stale state like "starting", "playing", "loading", "paused"

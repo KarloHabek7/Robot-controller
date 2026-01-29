@@ -14,12 +14,29 @@ import { useRobotStore } from '@/stores/robotStore';
 const ProgramControl = () => {
   const { t } = useTranslation();
   const loadedProgram = useRobotStore(state => state.loadedProgram);
+  const programState = useRobotStore(state => state.programState);
+  const storeStartProgram = useRobotStore(state => state.startProgram);
+  const storePauseProgram = useRobotStore(state => state.pauseProgram);
+  const storeResumeProgram = useRobotStore(state => state.resumeProgram);
+  const storeStopProgram = useRobotStore(state => state.stopProgram);
+
   const [programName, setProgramName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [programs, setPrograms] = useState<string[]>([]);
-  const [status, setStatus] = useState<'stopped' | 'running' | 'paused'>('stopped');
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+
+  // Derived status string for UI
+  const status = programState === 1 ? 'running' : programState === 2 ? 'paused' : 'stopped';
+
+  // Sync programName input with loadedProgram if input is empty
+  useEffect(() => {
+    if (loadedProgram && !programName) {
+      const fileName = loadedProgram.split('/').pop() || "";
+      setProgramName(fileName);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedProgram]);
 
   const fetchPrograms = async () => {
     setIsFetching(true);
@@ -29,8 +46,9 @@ const ProgramControl = () => {
       if (list.length === 0) {
         console.warn("No programs found on robot");
       }
-    } catch (error: any) {
-      toast.error(error.message || t('errors.fetchFailed'));
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : t('errors.fetchFailed');
+      toast.error(msg);
     } finally {
       setIsFetching(false);
     }
@@ -38,6 +56,7 @@ const ProgramControl = () => {
 
   useEffect(() => {
     fetchPrograms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredPrograms = useMemo(() => {
@@ -54,12 +73,12 @@ const ProgramControl = () => {
 
     setIsLoading(true);
     try {
-      await api.startProgram(targetName);
-      setStatus('running');
+      await storeStartProgram(targetName);
       if (nameOverride) setProgramName(nameOverride);
       toast.success(`${t('programs.running')}: ${targetName}`);
-    } catch (error: any) {
-      toast.error(error.message || t('errors.commandFailed'));
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : t('errors.commandFailed');
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -69,18 +88,17 @@ const ProgramControl = () => {
     setIsLoading(true);
     try {
       if (status === 'paused') {
-        // Resume - call play without loading
-        await api.resumeProgram();
-        setStatus('running');
+        // Resume
+        await storeResumeProgram();
         toast.success(t('programs.resume') + 'd');
       } else {
         // Pause
-        await api.pauseProgram();
-        setStatus('paused');
+        await storePauseProgram();
         toast.info(t('programs.paused'));
       }
-    } catch (error: any) {
-      toast.error(error.message || t('errors.commandFailed'));
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : t('errors.commandFailed');
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -89,11 +107,11 @@ const ProgramControl = () => {
   const handleStop = async () => {
     setIsLoading(true);
     try {
-      await api.stopProgram();
-      setStatus('stopped');
+      await storeStopProgram();
       toast.success(t('programs.stopped'));
-    } catch (error: any) {
-      toast.error(error.message || t('errors.commandFailed'));
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : t('errors.commandFailed');
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }

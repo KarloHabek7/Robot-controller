@@ -101,6 +101,7 @@ interface RobotState {
   safetyMode: number;
   robotMode: number;
   programState: number; // 0: STOPPED, 1: PLAYING, 2: PAUSED
+  programStateLockedUntil: number; // Timestamp until which we ignore WebSocket programState updates
   loadedProgram: string | null;
 
   // === ACTIONS ===
@@ -140,6 +141,9 @@ interface RobotState {
   commitTargetJoints: () => void;
   commitTargetTcp: () => void;
   unlockProtectiveStop: () => Promise<void>;
+  startProgram: (name: string) => Promise<void>;
+  pauseProgram: () => Promise<void>;
+  resumeProgram: () => Promise<void>;
   stopProgram: () => Promise<void>;
 }
 
@@ -188,6 +192,7 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   safetyMode: -1,
   robotMode: -1,
   programState: 0,
+  programStateLockedUntil: 0,
   loadedProgram: null,
 
   // === ACTIONS ===
@@ -305,7 +310,10 @@ export const useRobotStore = create<RobotState>((set, get) => ({
 
       const nextRobotMode = robotMode !== undefined ? robotMode : state.robotMode;
       const nextSafetyMode = safetyMode !== undefined ? safetyMode : state.safetyMode;
-      const nextProgramState = programState !== undefined ? programState : state.programState;
+      const now = Date.now();
+      const nextProgramState = (programState !== undefined && now > state.programStateLockedUntil)
+        ? programState
+        : state.programState;
 
       // Hardware is in a stop state if safety mode is 3 (Protective), 4 (Recovery), 6 (System E-Stop), or 7 (Robot E-Stop)
       const hardwareStopDetected = nextSafetyMode === 3 || nextSafetyMode === 4 || nextSafetyMode === 6 || nextSafetyMode === 7;
@@ -480,11 +488,85 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       const { api } = await import('@/services/api');
       const result = await api.unlockProtectiveStop();
       if (result.success) {
-        // Optimistically clear the local E-Stop latch
-        set({ isEStopActive: false, safetyMode: 1 });
+        // Optimistically clear the local E-Stop latch and reset UI state
+        set({
+          isEStopActive: false,
+          safetyMode: 1,
+          isMoving: false,
+          isTargetDirty: false,
+          targetJoints: [...state.actualJoints],
+          targetTcpPose: [...state.actualTcpPose],
+        });
       }
     } catch (error) {
       console.error("Failed to unlock protective stop", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Request robot to start a program
+   */
+  startProgram: async (name: string) => {
+    const state = get();
+    if (!state.isConnected) return;
+
+    try {
+      const { api } = await import('@/services/api');
+      const result = await api.startProgram(name);
+      if (result.success) {
+        set({
+          programState: 1,
+          loadedProgram: name,
+          programStateLockedUntil: Date.now() + 1000
+        }); // Optimistically set to PLAYING
+      }
+    } catch (error) {
+      console.error("Failed to start program", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Request robot to pause program
+   */
+  pauseProgram: async () => {
+    const state = get();
+    if (!state.isConnected) return;
+
+    try {
+      const { api } = await import('@/services/api');
+      const result = await api.pauseProgram();
+      if (result.success) {
+        set({
+          programState: 2,
+          programStateLockedUntil: Date.now() + 1000
+        }); // Optimistically set to PAUSED
+      }
+    } catch (error) {
+      console.error("Failed to pause program", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Request robot to resume program
+   */
+  resumeProgram: async () => {
+    const state = get();
+    if (!state.isConnected) return;
+
+    try {
+      const { api } = await import('@/services/api');
+      const result = await api.resumeProgram();
+      if (result.success) {
+        set({
+          programState: 1,
+          programStateLockedUntil: Date.now() + 1000
+        }); // Optimistically set to PLAYING
+      }
+    } catch (error) {
+      console.error("Failed to resume program", error);
       throw error;
     }
   },
@@ -500,7 +582,11 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       const { api } = await import('@/services/api');
       const result = await api.stopProgram();
       if (result.success) {
-        set({ robotMode: 5, programState: 0 }); // Optimistically set to IDLE / STOPPED
+        set({
+          robotMode: 5,
+          programState: 0,
+          programStateLockedUntil: Date.now() + 1000
+        }); // Optimistically set to IDLE / STOPPED
       }
     } catch (error) {
       console.error("Failed to stop program", error);
