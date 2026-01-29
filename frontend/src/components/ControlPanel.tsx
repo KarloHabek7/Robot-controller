@@ -223,8 +223,8 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
     try {
       await commitTargetTcp();
       toast.success(t('robot.movingToTargetTcp'));
-    } catch (error) {
-      toast.error(t('errors.commandFailed'));
+    } catch (error: any) {
+      toast.error(error.message || t('errors.commandFailed'));
     }
   };
 

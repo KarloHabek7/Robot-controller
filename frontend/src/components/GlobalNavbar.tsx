@@ -26,16 +26,16 @@ export const GlobalNavbar = () => {
                     setConnectionStatus(status.connected, status.host, status.port, status.speed_control_supported);
                     toast.success(t('auth.loginSuccess'));
                 }
-            } catch (error) {
-                toast.error(t('errors.connectionFailed'));
+            } catch (error: any) {
+                toast.error(error.message || t('errors.connectionFailed'));
             }
         } else {
             try {
                 await api.disconnectRobot();
                 setConnectionStatus(false);
                 toast.info(t('robot.disconnected'));
-            } catch (error) {
-                toast.error(t('errors.commandFailed'));
+            } catch (error: any) {
+                toast.error(error.message || t('errors.commandFailed'));
             }
         }
     };

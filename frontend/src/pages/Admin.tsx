@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 
@@ -28,7 +28,6 @@ interface User {
 const Admin = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const { toast } = useToast();
     const { user, signOut } = useAuth();
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -44,13 +43,9 @@ const Admin = () => {
             // Let's assume we will add getUsers to api service
             const response = await api.get<User[]>('/api/admin/users');
             setUsers(response);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to fetch users", error);
-            toast({
-                title: t('common.error'),
-                description: t('admin.failedToFetch'),
-                variant: "destructive",
-            });
+            toast.error(error.message || t('admin.failedToFetch'));
         } finally {
             setLoading(false);
         }
@@ -59,20 +54,20 @@ const Admin = () => {
     const handleApprove = async (userId: number) => {
         try {
             await api.post(`/api/admin/users/${userId}/approve`, {});
-            toast({ title: t('common.success'), description: t('admin.userApproved') });
+            toast.success(t('admin.userApproved'));
             fetchUsers();
         } catch (error) {
-            toast({ title: t('common.error'), description: t('admin.failedToApprove'), variant: "destructive" });
+            toast.error(t('admin.failedToApprove'));
         }
     };
 
     const handleRevoke = async (userId: number) => {
         try {
             await api.post(`/api/admin/users/${userId}/revoke`, {});
-            toast({ title: t('common.success'), description: t('admin.userRevoked') });
+            toast.success(t('admin.userRevoked'));
             fetchUsers();
         } catch (error) {
-            toast({ title: t('common.error'), description: t('admin.failedToRevoke'), variant: "destructive" });
+            toast.error(t('admin.failedToRevoke'));
         }
     };
 
@@ -80,10 +75,10 @@ const Admin = () => {
         if (!confirm(t('admin.confirmDelete'))) return;
         try {
             await api.delete(`/api/admin/users/${userId}`);
-            toast({ title: t('common.success'), description: t('admin.userDeleted') });
+            toast.success(t('admin.userDeleted'));
             fetchUsers();
         } catch (error) {
-            toast({ title: t('common.error'), description: t('admin.failedToDelete'), variant: "destructive" });
+            toast.error(t('admin.failedToDelete'));
         }
     };
 

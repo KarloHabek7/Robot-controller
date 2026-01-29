@@ -29,8 +29,8 @@ const ProgramControl = () => {
       if (list.length === 0) {
         console.warn("No programs found on robot");
       }
-    } catch (error) {
-      toast.error(t('errors.fetchFailed'));
+    } catch (error: any) {
+      toast.error(error.message || t('errors.fetchFailed'));
     } finally {
       setIsFetching(false);
     }
@@ -58,8 +58,8 @@ const ProgramControl = () => {
       setStatus('running');
       if (nameOverride) setProgramName(nameOverride);
       toast.success(`${t('programs.running')}: ${targetName}`);
-    } catch (error) {
-      toast.error(t('errors.commandFailed'));
+    } catch (error: any) {
+      toast.error(error.message || t('errors.commandFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -79,8 +79,8 @@ const ProgramControl = () => {
         setStatus('paused');
         toast.info(t('programs.paused'));
       }
-    } catch (error) {
-      toast.error(t('errors.commandFailed'));
+    } catch (error: any) {
+      toast.error(error.message || t('errors.commandFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -92,8 +92,8 @@ const ProgramControl = () => {
       await api.stopProgram();
       setStatus('stopped');
       toast.success(t('programs.stopped'));
-    } catch (error) {
-      toast.error(t('errors.commandFailed'));
+    } catch (error: any) {
+      toast.error(error.message || t('errors.commandFailed'));
     } finally {
       setIsLoading(false);
     }

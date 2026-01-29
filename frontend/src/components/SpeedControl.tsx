@@ -48,7 +48,7 @@ export const SpeedControl = () => {
             await api.setRobotSpeed(vals[0] / 100);
         } catch (error) {
             console.error("Failed to set speed:", error);
-            toast.error(t('errors.failedToSetSpeed'));
+            toast.error(error.message || t('errors.failedToSetSpeed'));
         }
     };
 

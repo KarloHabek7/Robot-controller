@@ -91,8 +91,8 @@ const JointControlTable = () => {
     try {
       await commitTargetJoints();
       toast.success(t('robot.movingToTarget'));
-    } catch (error) {
-      toast.error(t('errors.commandFailed'));
+    } catch (error: any) {
+      toast.error(error.message || t('errors.commandFailed'));
     }
   };
 

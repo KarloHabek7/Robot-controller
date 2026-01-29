@@ -513,22 +513,34 @@ class RobotTCPClient:
             return False, "Not connected to Dashboard"
         
         last_result = ""
-        # Try up to 2 times to handle stale responses
-        for attempt in range(2):
+        # Try up to 3 times to handle stale responses
+        for attempt in range(3):
             result = await self.send_dashboard_command(f"load {program_name}")
             if result is None:
                 return False, "No response from Dashboard"
             
             last_result = result
             low_res = result.lower()
+
+            # Handle explicit errors
+            if "remote control mode is disabled" in low_res:
+                return False, result
             
-            # Check for errors
+            if "failed to execute" in low_res:
+                if "load" in low_res:
+                    return False, result
+                if attempt < 2:
+                    await asyncio.sleep(0.1)
+                    continue
+                return False, result
+            
+            # Check for other errors
             if "file not found" in low_res or "error" in low_res or "failed" in low_res:
                 return False, result
             
             # Ignore connection banners
             if "connected:" in low_res or "dashboard server" in low_res:
-                if attempt == 0:
+                if attempt < 2:
                     await asyncio.sleep(0.1)
                     continue
                 return False, result
@@ -536,7 +548,7 @@ class RobotTCPClient:
             # Reject stale state messages (from previous commands)
             stale_states = ["pausing", "paused", "stopped", "stopping", "starting", "playing"]
             if any(state in low_res for state in stale_states) and "loading" not in low_res:
-                if attempt == 0:
+                if attempt < 2:
                     await asyncio.sleep(0.1)
                     continue
                 return False, result
@@ -553,29 +565,41 @@ class RobotTCPClient:
             return False, "Not connected to Dashboard"
         
         last_result = ""
-        # Try up to 2 times to handle stale responses
-        for attempt in range(2):
+        # Try up to 3 times to handle stale responses and echoes
+        for attempt in range(3):
             result = await self.send_dashboard_command("play")
             if result is None:
                 return False, "No response from Dashboard"
                 
             last_result = result
             low_res = result.lower()
+
+            # Handle explicit errors
+            if "remote control mode is disabled" in low_res:
+                return False, result
+
+            if "failed to execute" in low_res:
+                if "play" in low_res:
+                    return False, result
+                if attempt < 2:
+                    await asyncio.sleep(0.1)
+                    continue
+                return False, result
             
-            # Check for errors
+            # Check for other errors
             if "error" in low_res or "failed" in low_res:
                 return False, result
             
             # Ignore connection banners
             if "connected:" in low_res or "dashboard server" in low_res:
-                if attempt == 0:
+                if attempt < 2:
                     await asyncio.sleep(0.1)
                     continue
                 return False, result
 
             # Stale rejection: if we see "stopped", "pausing", "paused", it's definitely stale
             if any(x in low_res for x in ["stopped", "stopping", "paused", "pausing"]):
-                 if attempt == 0:
+                 if attempt < 2:
                     await asyncio.sleep(0.1)
                     continue
                  return False, result
@@ -586,79 +610,115 @@ class RobotTCPClient:
                 if attempt == 0:
                     await asyncio.sleep(0.2) # Wait a bit longer
                     continue
-                # If it persists on 2nd attempt, assume it's the quirk and accept it
+                # If it persists on subsequent attempts, assume it's the quirk and accept it
                 return True, result
 
             if any(x in low_res for x in ["starting", "playing", "started"]):
                 return True, result
             
             # Retry if we got something else unknown
-            if attempt == 0:
+            if attempt < 2:
                 await asyncio.sleep(0.1)
                 continue
         
         return False, last_result
 
 
-    async def pause_program(self) -> bool:
-        """Pause program via Dashboard server."""
+    async def pause_program(self) -> tuple[bool, str]:
+        """Pause program via Dashboard server. Returns (success, message)."""
         if not self.dashboard_connected:
-            return False
+            return False, "Not connected to Dashboard"
         
-        # Try up to 2 times to handle stale responses
-        for attempt in range(2):
+        last_result = ""
+        # Try up to 3 times to handle stale responses
+        for attempt in range(3):
             result = await self.send_dashboard_command("pause")
             if result is None:
-                return False
+                return False, "No response from Dashboard"
                 
+            last_result = result
             low_res = result.lower()
-            # Ignore connection banners
-            if "connected:" in low_res or "dashboard server" in low_res:
-                if attempt == 0:
+
+            # Handle explicit errors
+            if "remote control mode is disabled" in low_res:
+                return False, result
+
+            if "failed to execute" in low_res:
+                if "pause" in low_res:
+                    return False, result
+                if attempt < 2:
                     await asyncio.sleep(0.1)
                     continue
-                return False
+                return False, result
+
+            if "error" in low_res or "failed" in low_res:
+                return False, result
+
+            # Ignore connection banners
+            if "connected:" in low_res or "dashboard server" in low_res:
+                if attempt < 2:
+                    await asyncio.sleep(0.1)
+                    continue
+                return False, result
             
             # Accept pausing/paused responses
             if any(x in low_res for x in ["pausing", "paused"]):
-                return True
+                return True, result
             
-            # Retry if we got a stale state like "starting"
-            if attempt == 0:
+            # Retry if we got a stale state like "starting", "playing", "loading", "stopped"
+            if attempt < 2:
                 await asyncio.sleep(0.1)
                 continue
         
-        return False
+        return False, last_result
 
-    async def stop_program(self) -> bool:
-        """Stop program via Dashboard server."""
+    async def stop_program(self) -> tuple[bool, str]:
+        """Stop program via Dashboard server. Returns (success, message)."""
         if not self.dashboard_connected:
-            return False
+            return False, "Not connected to Dashboard"
         
-        # Try up to 2 times to handle stale responses
-        for attempt in range(2):
+        last_result = ""
+        # Try up to 3 times to handle stale responses
+        for attempt in range(3):
             result = await self.send_dashboard_command("stop")
             if result is None:
-                return False
+                return False, "No response from Dashboard"
                 
+            last_result = result
             low_res = result.lower()
-            # Ignore connection banners
-            if "connected:" in low_res or "dashboard server" in low_res:
-                if attempt == 0:
+
+            # Handle explicit errors
+            if "remote control mode is disabled" in low_res:
+                return False, result
+
+            if "failed to execute" in low_res:
+                if "stop" in low_res:
+                    return False, result
+                if attempt < 2:
                     await asyncio.sleep(0.1)
                     continue
-                return False
+                return False, result
+
+            if "error" in low_res or "failed" in low_res:
+                return False, result
+
+            # Ignore connection banners
+            if "connected:" in low_res or "dashboard server" in low_res:
+                if attempt < 2:
+                    await asyncio.sleep(0.1)
+                    continue
+                return False, result
             
             # Accept stopped/stopping responses
             if any(x in low_res for x in ["stopped", "stopping"]):
-                return True
+                return True, result
             
-            # Retry if we got a stale state like "starting"
-            if attempt == 0:
+            # Retry if we got a stale state like "starting", "playing", "loading", "paused"
+            if attempt < 2:
                 await asyncio.sleep(0.1)
                 continue
         
-        return False
+        return False, last_result
 
     async def get_loaded_program(self) -> Optional[str]:
         """Get the path of the currently loaded program."""

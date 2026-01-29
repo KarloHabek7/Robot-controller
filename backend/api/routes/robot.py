@@ -275,28 +275,28 @@ async def stop_program(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    success = await robot_client.stop_program()
+    success, msg = await robot_client.stop_program()
     
     await run_in_threadpool(log_command, current_user.id, "Stop Program", success, session)
     
     if success:
         return CommandResponse(success=True, command="dashboard stop", timestamp=datetime.utcnow().isoformat())
     else:
-        raise HTTPException(status_code=500, detail="Not connected to robot/dashboard")
+        raise HTTPException(status_code=500, detail=msg or "Failed to stop program")
 
 @router.post("/program/pause", response_model=CommandResponse)
 async def pause_program(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    success = await robot_client.pause_program()
+    success, msg = await robot_client.pause_program()
     
     await run_in_threadpool(log_command, current_user.id, "Pause Program", success, session)
     
     if success:
         return CommandResponse(success=True, command="dashboard pause", timestamp=datetime.utcnow().isoformat())
     else:
-        raise HTTPException(status_code=500, detail="Not connected to robot/dashboard")
+        raise HTTPException(status_code=500, detail=msg or "Failed to pause program")
 
 @router.post("/program/resume", response_model=CommandResponse)
 async def resume_program(
