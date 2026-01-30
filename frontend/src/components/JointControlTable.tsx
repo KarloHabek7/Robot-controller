@@ -14,6 +14,7 @@ const JointControlTable = () => {
   const { t } = useTranslation();
   const {
     actualJoints,
+    baselineJoints,
     targetJoints,
     jointMetadata,
     isTargetDirty,
@@ -34,7 +35,7 @@ const JointControlTable = () => {
 
   // Calculate delta for a joint
   const getDelta = (jointId: number): number => {
-    const delta = targetJoints[jointId - 1] - actualJoints[jointId - 1];
+    const delta = targetJoints[jointId - 1] - baselineJoints[jointId - 1];
     return parseFloat(delta.toFixed(2));
   };
 

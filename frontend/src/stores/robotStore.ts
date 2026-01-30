@@ -74,6 +74,10 @@ interface RobotState {
   actualTcpPose: number[];     // [6] array: [x, y, z, rx, ry, rz] in mm and degrees
   actualTcpOffset: number[];   // [6] array: tool offset [x, y, z, rx, ry, rz]
 
+  // === BASELINE STATE (for stable previews) ===
+  baselineJoints: number[];    // Reference joints captured when idle
+  baselineTcpPose: number[];   // Reference TCP pose captured when idle
+
   // === TARGET STATE (user-controlled) ===
   targetJoints: number[];      // [6] array of target joint angles
   targetTcpPose: number[];     // [6] array: target TCP pose
@@ -157,6 +161,10 @@ export const useRobotStore = create<RobotState>((set, get) => ({
   actualJoints: [0, -90, 0, -90, 0, 0],
   actualTcpPose: [0, 0, 0, 0, 0, 0],
   actualTcpOffset: [0, 0, 0, 0, 0, 0],
+
+  // Baseline state (initially same as actual)
+  baselineJoints: [0, -90, 0, -90, 0, 0],
+  baselineTcpPose: [0, 0, 0, 0, 0, 0],
 
   // Target state (initially same as actual)
   targetJoints: [0, -90, 0, -90, 0, 0],
@@ -280,6 +288,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
     set((state) => ({
       targetJoints: [...state.actualJoints],
       targetTcpPose: [...state.actualTcpPose],
+      baselineJoints: [...state.actualJoints],
+      baselineTcpPose: [...state.actualTcpPose],
       isTargetDirty: false,
       isMoving: false, // Reset moving state as well if user forces a reset
     }));
@@ -295,6 +305,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
       isTargetDirty: false,
       targetJoints: [...state.actualJoints],
       targetTcpPose: [...state.actualTcpPose],
+      baselineJoints: [...state.actualJoints],
+      baselineTcpPose: [...state.actualTcpPose],
     }));
   },
 
@@ -328,6 +340,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
           actualJoints: joints,
           actualTcpPose: tcpPose,
           actualTcpOffset: tcpOffset,
+          baselineJoints: joints,
+          baselineTcpPose: tcpPose,
           targetJoints: joints,
           targetTcpPose: tcpPose,
           robotSpeed: robotSpeedValue,
@@ -367,6 +381,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
             actualTcpOffset: tcpOffset,
             targetJoints: syncJoints ? joints : state.targetJoints,
             targetTcpPose: syncTcp ? tcpPose : state.targetTcpPose,
+            baselineJoints: joints,
+            baselineTcpPose: tcpPose,
             robotSpeed: robotSpeedValue,
             safetyMode: nextSafetyMode,
             robotMode: nextRobotMode,
@@ -496,6 +512,8 @@ export const useRobotStore = create<RobotState>((set, get) => ({
           isTargetDirty: false,
           targetJoints: [...state.actualJoints],
           targetTcpPose: [...state.actualTcpPose],
+          baselineJoints: [...state.actualJoints],
+          baselineTcpPose: [...state.actualTcpPose],
         });
       }
     } catch (error) {

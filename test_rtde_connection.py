@@ -18,7 +18,7 @@ except ImportError as e:
         print(f"Failed to import top level rtde: {e2}")
         sys.exit(1)
 
-ROBOT_HOST = '192.168.15.130'
+ROBOT_HOST = '192.168.40.14'
 ROBOT_PORT = 30004
 
 def test_connection():

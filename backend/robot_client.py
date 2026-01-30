@@ -241,6 +241,56 @@ class RobotTCPClient:
                 self.dashboard_connected = False
                 return None
 
+    async def _setup_rtde_recipe(self, recipe_name: str, is_output: bool = True) -> Optional[any]:
+        """Robustly setup an RTDE recipe by filtering out unsupported fields."""
+        if not self.rtde_con or not self.rtde_config:
+            return None
+            
+        names, _ = self.rtde_config.get_recipe(recipe_name)
+        
+        # Try full setup first (names only for flexibility)
+        try:
+            if is_output:
+                res = await asyncio.to_thread(self.rtde_con.send_output_setup, names)
+            else:
+                res = await asyncio.to_thread(self.rtde_con.send_input_setup, names)
+            
+            if res:
+                return res
+        except Exception as e:
+            print(f"[RobotClient] RTDE recipe '{recipe_name}' full setup failed: {e}. Retrying with field-by-field discovery...")
+
+        # Field-by-field discovery
+        supported_names = []
+        for name in names:
+            try:
+                if is_output:
+                    success = await asyncio.to_thread(self.rtde_con.send_output_setup, [name])
+                else:
+                    success = await asyncio.to_thread(self.rtde_con.send_input_setup, [name])
+                
+                if success:
+                    supported_names.append(name)
+            except Exception:
+                # This field is likely not supported by this robot version
+                continue
+        
+        if not supported_names:
+            print(f"[RobotClient] RTDE recipe '{recipe_name}': No fields supported!")
+            return None
+            
+        print(f"[RobotClient] RTDE recipe '{recipe_name}' negotiated. Supported: {supported_names}, Skipped: {list(set(names) - set(supported_names))}")
+        
+        # Final setup with supported fields
+        try:
+            if is_output:
+                return await asyncio.to_thread(self.rtde_con.send_output_setup, supported_names)
+            else:
+                return await asyncio.to_thread(self.rtde_con.send_input_setup, supported_names)
+        except Exception as e:
+            print(f"[RobotClient] RTDE final setup for '{recipe_name}' failed: {e}")
+            return None
+
     async def _rtde_handshake(self) -> bool:
         """Perform RTDE handshake and setup recipes using the library."""
         if not self.rtde_con:
@@ -248,32 +298,29 @@ class RobotTCPClient:
         
         print("[RobotClient] Starting RTDE library handshake...")
         try:
-            # 1. Load config
+            # 1. Get Controller Version
+            version = await asyncio.to_thread(self.rtde_con.get_controller_version)
+            print(f"[RobotClient] RTDE: Connected to robot version: {version}")
+
+            # 2. Load config
             config_path = os.path.join(os.getcwd(), "record_config.xml")
             if not os.path.exists(config_path):
-                # Try relative to this file
                 config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "record_config.xml")
             
             print(f"[RobotClient] RTDE: Using config at {config_path}")
             self.rtde_config = rtde_config.ConfigFile(config_path)
             
-            # 2. Setup Outputs
-            state_names, state_types = self.rtde_config.get_recipe('state')
-            if not await asyncio.to_thread(self.rtde_con.send_output_setup, state_names, state_types):
+            # 3. Setup Outputs (Dynamic)
+            if not await self._setup_rtde_recipe('state', is_output=True):
                 print("[RobotClient] RTDE: Failed to setup outputs")
                 return False
                 
-            # 3. Setup Inputs (optional but good to have)
-            try:
-                input_names, input_types = self.rtde_config.get_recipe('set_speed')
-                self.rtde_watch_input = await asyncio.to_thread(self.rtde_con.send_input_setup, input_names, input_types)
-                if not self.rtde_watch_input:
-                    print("[RobotClient] RTDE: Failed to setup inputs (set_speed recipe)")
-            except Exception as ie:
-                print(f"[RobotClient] RTDE: Input setup skipped: {ie}")
-                self.rtde_watch_input = None
+            # 4. Setup Inputs (Dynamic)
+            self.rtde_watch_input = await self._setup_rtde_recipe('set_speed', is_output=False)
+            if not self.rtde_watch_input:
+                print("[RobotClient] RTDE: Input setup failed/skipped (speed slider control via RTDE may be disabled)")
 
-            # 4. Start synchronization
+            # 5. Start synchronization
             if not await asyncio.to_thread(self.rtde_con.send_start):
                 print("[RobotClient] RTDE: Failed to start synchronization")
                 return False
@@ -315,9 +362,20 @@ class RobotTCPClient:
                 # actual_q
                 q_actual = getattr(state, 'actual_q', None)
                 
-                speed_scaling = getattr(state, 'speed_scaling', 1.0)
-                target_fraction = getattr(state, 'target_speed_fraction', 1.0)
-                self.rtde_speed_slider = max(speed_scaling, target_fraction)
+                # Robust Speed Handling:
+                # On some robots (v5.9), 'target_speed_fraction' represents the slider while 'speed_scaling'
+                # jumps to 1.0 when running. On others, it's the opposite.
+                # We prioritize the value that is "in the middle" (0.0 < val < 1.0) to avoid jumps to extremes.
+                ss = getattr(state, 'speed_scaling', None)
+                tsf = getattr(state, 'target_speed_fraction', None)
+                
+                if tsf is not None and 0.0 < tsf < 1.0:
+                    self.rtde_speed_slider = tsf
+                elif ss is not None and 0.0 < ss < 1.0:
+                    self.rtde_speed_slider = ss
+                else:
+                    # Fallback if both are at extremes (0.0, 1.0) or missing
+                    self.rtde_speed_slider = max(ss if ss is not None else 1.0, tsf if tsf is not None else 1.0)
 
                 # Update latest_state
                 if q_actual is not None and tcp_pose is not None:
@@ -358,14 +416,17 @@ class RobotTCPClient:
         
         if self.rtde_connected and self.rtde_con and self.rtde_watch_input:
             try:
-                # Prepare input data
-                self.rtde_watch_input.speed_slider_mask = 1
-                self.rtde_watch_input.speed_slider_fraction = safe_fraction
-                # Send
-                await asyncio.to_thread(self.rtde_con.send, self.rtde_watch_input)
-                print(f"[RobotClient] Speed command sent via RTDE")
-
-                return True
+                # Check if fields exist on negotiated recipe
+                if hasattr(self.rtde_watch_input, 'speed_slider_mask') and hasattr(self.rtde_watch_input, 'speed_slider_fraction'):
+                    # Prepare input data
+                    self.rtde_watch_input.speed_slider_mask = 1
+                    self.rtde_watch_input.speed_slider_fraction = safe_fraction
+                    # Send
+                    await asyncio.to_thread(self.rtde_con.send, self.rtde_watch_input)
+                    print(f"[RobotClient] Speed command sent via RTDE")
+                    return True
+                else:
+                    print(f"[RobotClient] RTDE: Speed slider fields not supported by this robot. Falling back to URScript.")
             except Exception as e:
                 print(f"[RobotClient] RTDE speed command failed: {e}. Falling back to URScript.")
         

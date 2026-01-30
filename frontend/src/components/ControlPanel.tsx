@@ -109,6 +109,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
   // Store state
   const {
     actualTcpPose: actualRobotPose,
+    baselineTcpPose: baselineRobotPose,
     targetTcpPose: targetRobotPose,
     isTargetDirty,
     isMoving,
@@ -145,15 +146,20 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
   ];
 
   const actualTcpPose = toUI(actualRobotPose);
+  const baselineTcpPose = toUI(baselineRobotPose);
   const targetTcpPose = toUI(targetRobotPose);
 
   // Derived display poses based on coordinate mode
   const displayTargetPose = coordinateMode === 'base'
     ? targetTcpPose
-    : poseTrans(poseInv(actualTcpPose), targetTcpPose);
+    : poseTrans(poseInv(baselineTcpPose), targetTcpPose);
 
   const displayActualPose = (coordinateMode === 'tool' || coordinateMode === 'relative')
     ? [0, 0, 0, 0, 0, 0]
+    : baselineTcpPose;
+
+  const displayLiveActualPose = (coordinateMode === 'tool' || coordinateMode === 'relative')
+    ? poseTrans(poseInv(baselineTcpPose), actualTcpPose)
     : actualTcpPose;
 
   // Helper to format numbers for display
@@ -176,10 +182,10 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
       updateTargetTcp(toRobot(newUiPose));
     } else {
       // Relative edit in tool frame
-      const currentRelative = poseTrans(poseInv(actualTcpPose), targetTcpPose);
+      const currentRelative = poseTrans(poseInv(baselineTcpPose), targetTcpPose);
       currentRelative[index] = numVal;
-      // Convert back to base frame: Target = Actual * Relative
-      const newBasePose = poseTrans(actualTcpPose, currentRelative);
+      // Convert back to base frame: Target = Baseline * Relative
+      const newBasePose = poseTrans(baselineTcpPose, currentRelative);
       updateTargetTcp(toRobot(newBasePose));
     }
 
@@ -202,10 +208,10 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
       newUiPose[axisIndex] = Number((newUiPose[axisIndex] + step * direction).toFixed(2));
       updateTargetTcp(toRobot(newUiPose));
     } else if (coordinateMode === 'tool') {
-      // Tool frame: Jogging is relative to the ACTUAL position, but preserves other adjustments
-      const currentRelative = poseTrans(poseInv(actualTcpPose), targetTcpPose);
+      // Tool frame: Jogging is relative to the BASELINE position, but preserves other adjustments
+      const currentRelative = poseTrans(poseInv(baselineTcpPose), targetTcpPose);
       currentRelative[axisIndex] = Number((currentRelative[axisIndex] + step * direction).toFixed(2));
-      const newUiPose = poseTrans(actualTcpPose, currentRelative);
+      const newUiPose = poseTrans(baselineTcpPose, currentRelative);
       updateTargetTcp(toRobot(newUiPose));
     } else {
       // Relative frame: Jogging is ALWAYS relative to the CURRENT TARGET in its own frame (cumulative)
@@ -243,6 +249,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
   const renderCoordinateRow = (label: string, index: number, unit: string) => {
     const target = displayTargetPose[index];
     const actual = displayActualPose[index];
+    const liveActual = displayLiveActualPose[index];
     const diff = target - actual;
     const isDirty = Math.abs(diff) > 0.005;
 
@@ -302,7 +309,7 @@ const ControlPanel = ({ onMove: _onMove, onGoToPosition: _onGoToPosition }: Cont
           {/* Status Display - Adjusted width for longer values */}
           <div className="w-[55px] sm:w-[66px] flex flex-col gap-0 justify-center text-right overflow-hidden shrink-0 pr-1">
             <div className="text-[8px] sm:text-[9px] text-muted-foreground/60 font-mono leading-tight truncate">
-              {t('robot.act')} <span className="text-foreground/80">{fmt(actual)}</span>
+              {t('robot.act')} <span className="text-foreground/80">{fmt(liveActual)}</span>
             </div>
             {isDirty && (
               <div className="text-[8px] sm:text-[9px] font-bold font-mono text-primary leading-tight truncate">
