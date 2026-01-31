@@ -314,6 +314,22 @@ class ApiClient {
             }
         );
     }
+
+    // Admin endpoints
+    async getActivityLogs(limit: number = 100) {
+        return this.request<any[]>(
+            `/api/admin/logs?limit=${limit}`
+        );
+    }
+
+    async clearActivityLogs() {
+        return this.request<void>(
+            '/api/admin/logs',
+            {
+                method: 'DELETE'
+            }
+        );
+    }
 }
 
 export const api = new ApiClient(API_BASE_URL);

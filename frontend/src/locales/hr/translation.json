@@ -201,7 +201,12 @@
         "failedToApprove": "Odobravanje korisnika nije uspjelo",
         "failedToRevoke": "Opoziv korisnika nije uspjelo",
         "failedToDelete": "Brisanje korisnika nije uspjelo",
-        "failedToFetch": "Dohvaćanje korisnika nije uspjelo"
+        "failedToFetch": "Dohvaćanje korisnika nije uspjelo",
+        "activityLogs": "Logovi aktivnosti",
+        "failedToFetchLogs": "Dohvaćanje logova nije uspjelo",
+        "confirmClearLogs": "Jeste li sigurni da želite obrisati sve logove?",
+        "logsCleared": "Logovi uspješno obrisani",
+        "failedToClearLogs": "Brisanje logova nije uspjelo"
     },
     "safety": {
         "normal": "Normalno",

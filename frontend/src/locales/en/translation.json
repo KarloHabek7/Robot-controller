@@ -201,7 +201,12 @@
         "failedToApprove": "Failed to approve user",
         "failedToRevoke": "Failed to revoke user",
         "failedToDelete": "Failed to delete user",
-        "failedToFetch": "Failed to fetch users"
+        "failedToFetch": "Failed to fetch users",
+        "activityLogs": "Activity Logs",
+        "failedToFetchLogs": "Failed to fetch activity logs",
+        "confirmClearLogs": "Are you sure you want to clear all logs?",
+        "logsCleared": "Logs cleared successfully",
+        "failedToClearLogs": "Failed to clear logs"
     },
     "safety": {
         "normal": "Normal",
